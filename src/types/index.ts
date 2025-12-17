@@ -100,6 +100,23 @@ export type AuditEntry = {
   timestamp: string
 }
 
+export type TriggerCondition =
+  | 'STATUS_CHANGE'
+  | 'STATUS_RED'
+  | 'RETROACTIVE_EDIT'
+export type NotificationChannel = 'PORTAL' | 'EMAIL'
+
+export type NotificationRule = {
+  id: string
+  userId: string
+  name: string
+  buId: string | 'ALL'
+  kpiType: 'ALL' | 'QUANT' | 'QUAL'
+  triggerCondition: TriggerCondition
+  channels: NotificationChannel[]
+  isActive: boolean
+}
+
 export const KPI_STATUS_COLORS = {
   GREEN: 'bg-emerald-500',
   YELLOW: 'bg-amber-500',

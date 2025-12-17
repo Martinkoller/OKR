@@ -10,6 +10,8 @@ import { OKRDetail } from './pages/okr/OKRDetail'
 import { KPIList } from './pages/kpi/KPIList'
 import { KPIDetail } from './pages/kpi/KPIDetail'
 import { Admin } from './pages/admin/Admin'
+import Documentation from './pages/documentation/Documentation'
+import NotificationSettings from './pages/settings/NotificationSettings'
 
 const App = () => (
   <BrowserRouter
@@ -33,6 +35,11 @@ const App = () => (
                 no KPI)
               </div>
             }
+          />
+          <Route path="/documentation" element={<Documentation />} />
+          <Route
+            path="/settings/notifications"
+            element={<NotificationSettings />}
           />
           <Route path="/admin" element={<Admin />} />
         </Route>

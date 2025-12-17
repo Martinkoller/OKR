@@ -14,6 +14,7 @@ import {
   MOCK_AUDIT_LOGS,
 } from '@/data/mockData'
 import { calculateStatus, calculateOKRProgress } from '@/lib/kpi-utils'
+import { useUserStore } from '@/stores/useUserStore'
 
 interface DataState {
   okrs: OKR[]
@@ -46,6 +47,7 @@ export const useDataStore = create<DataState>((set) => ({
       if (kpiIndex === -1) return state
 
       const oldKPI = state.kpis[kpiIndex]
+      const oldStatus = oldKPI.status
       const newStatus = calculateStatus(value, oldKPI.goal)
 
       const newHistoryEntry: KPIHistoryEntry = {
@@ -87,6 +89,13 @@ export const useDataStore = create<DataState>((set) => ({
         }
         return okr
       })
+
+      // Trigger Notification Engine
+      setTimeout(() => {
+        useUserStore
+          .getState()
+          .processKPINotification(updatedKPI, oldStatus, !!isRetroactive)
+      }, 0)
 
       return {
         kpis: newKPIs,

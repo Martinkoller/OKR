@@ -13,7 +13,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, History, LineChart as LineChartIcon } from 'lucide-react'
+import {
+  ArrowLeft,
+  History,
+  LineChart as LineChartIcon,
+  HelpCircle,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { AuditLogTimeline } from '@/components/AuditLogTimeline'
@@ -32,8 +37,7 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
 } from 'recharts'
 import {
   ChartContainer,
@@ -42,6 +46,11 @@ import {
 } from '@/components/ui/chart'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -196,10 +205,32 @@ export const KPIDetail = () => {
               </div>
               {/* Update Form */}
               <div className="space-y-4 pt-4 border-t">
-                <h3 className="font-medium">Atualizar Medição</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">Atualizar Medição</h3>
+                  <Link
+                    to="/documentation"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    <HelpCircle className="h-3 w-3" /> Regras de Cálculo
+                  </Link>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="value">Novo Valor</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="value">Novo Valor</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">
+                            Insira o valor acumulado do período. O status será
+                            recalculado automaticamente com base na meta de{' '}
+                            {kpi.goal} {kpi.unit}.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <Input
                       id="value"
                       type="number"
@@ -209,12 +240,25 @@ export const KPIDetail = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="justification">
-                      Justificativa / Comentário
-                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="justification">
+                        Justificativa / Comentário
+                      </Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">
+                            Obrigatório para status Amarelo ou Vermelho. Ficará
+                            registrado na trilha de auditoria.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <Textarea
                       id="justification"
-                      placeholder="Obrigatório se status for Amarelo ou Vermelho"
+                      placeholder="Contexto sobre o novo valor..."
                       className="resize-none h-10 min-h-[40px] focus:h-24 transition-all"
                       value={justification}
                       onChange={(e) => setJustification(e.target.value)}

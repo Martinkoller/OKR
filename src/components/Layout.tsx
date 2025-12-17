@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronDown,
   Building2,
+  BookOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +48,7 @@ const SidebarContent = () => {
     { href: '/okrs', label: 'OKRs', icon: Target },
     { href: '/kpis', label: 'KPIs', icon: BarChart2 },
     { href: '/audit', label: 'Auditoria', icon: ShieldCheck },
+    { href: '/documentation', label: 'Documentação', icon: BookOpen },
     { href: '/admin', label: 'Administração', icon: Settings },
   ]
 
@@ -234,7 +236,14 @@ export default function Layout() {
                 <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Perfil</DropdownMenuItem>
-                <DropdownMenuItem>Configurações</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings/notifications">
+                    Regras de Notificação
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/documentation">Ajuda & Documentação</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-red-600">
                   <LogOut className="mr-2 h-4 w-4" /> Sair

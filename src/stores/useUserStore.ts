@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { User, BU } from '@/types'
+import { User, BU, NotificationRule, KPI } from '@/types'
 import { MOCK_BUS, MOCK_USERS } from '@/data/mockData'
 
 interface UserState {
@@ -13,14 +13,48 @@ interface UserState {
     message: string
     read: boolean
   }>
+  notificationRules: NotificationRule[]
 
   setCurrentUser: (user: User) => void
   setSelectedBU: (buId: string | 'GLOBAL') => void
   addNotification: (title: string, message: string) => void
   markNotificationAsRead: (id: string) => void
+
+  // Notification Rules
+  addRule: (rule: NotificationRule) => void
+  updateRule: (rule: NotificationRule) => void
+  deleteRule: (ruleId: string) => void
+  processKPINotification: (
+    kpi: KPI,
+    oldStatus: string,
+    isRetroactive: boolean,
+  ) => void
 }
 
-export const useUserStore = create<UserState>((set) => ({
+const MOCK_RULES: NotificationRule[] = [
+  {
+    id: 'rule-1',
+    userId: 'u-1',
+    name: 'Alerta Crítico Global',
+    buId: 'ALL',
+    kpiType: 'ALL',
+    triggerCondition: 'STATUS_RED',
+    channels: ['PORTAL', 'EMAIL'],
+    isActive: true,
+  },
+  {
+    id: 'rule-2',
+    userId: 'u-2',
+    name: 'Varejo - Mudança de Status',
+    buId: 'bu-1',
+    kpiType: 'QUANT',
+    triggerCondition: 'STATUS_CHANGE',
+    channels: ['PORTAL'],
+    isActive: true,
+  },
+]
+
+export const useUserStore = create<UserState>((set, get) => ({
   currentUser: MOCK_USERS[0],
   selectedBUId: 'GLOBAL',
   bus: MOCK_BUS,
@@ -33,6 +67,7 @@ export const useUserStore = create<UserState>((set) => ({
       read: false,
     },
   ],
+  notificationRules: MOCK_RULES,
 
   setCurrentUser: (user) => set({ currentUser: user }),
   setSelectedBU: (buId) => set({ selectedBUId: buId }),
@@ -49,4 +84,74 @@ export const useUserStore = create<UserState>((set) => ({
         n.id === id ? { ...n, read: true } : n,
       ),
     })),
+
+  addRule: (rule) =>
+    set((state) => ({
+      notificationRules: [...state.notificationRules, rule],
+    })),
+  updateRule: (rule) =>
+    set((state) => ({
+      notificationRules: state.notificationRules.map((r) =>
+        r.id === rule.id ? rule : r,
+      ),
+    })),
+  deleteRule: (ruleId) =>
+    set((state) => ({
+      notificationRules: state.notificationRules.filter((r) => r.id !== ruleId),
+    })),
+
+  processKPINotification: (kpi, oldStatus, isRetroactive) => {
+    const state = get()
+    // For this demo, we check rules for the CURRENT user only to show the notification
+    // In a real backend, we would check all users.
+    // To simulate "Routing", we will iterate all mock rules.
+
+    const activeRules = state.notificationRules.filter((r) => r.isActive)
+
+    activeRules.forEach((rule) => {
+      // 1. Check BU Scope
+      if (rule.buId !== 'ALL' && rule.buId !== kpi.buId) return
+
+      // 2. Check KPI Type
+      if (rule.kpiType !== 'ALL' && rule.kpiType !== kpi.type) return
+
+      // 3. Check Condition
+      let shouldNotify = false
+      if (
+        rule.triggerCondition === 'STATUS_RED' &&
+        kpi.status === 'RED' &&
+        oldStatus !== 'RED'
+      ) {
+        shouldNotify = true
+      } else if (
+        rule.triggerCondition === 'STATUS_CHANGE' &&
+        kpi.status !== oldStatus
+      ) {
+        shouldNotify = true
+      } else if (
+        rule.triggerCondition === 'RETROACTIVE_EDIT' &&
+        isRetroactive
+      ) {
+        shouldNotify = true
+      }
+
+      if (shouldNotify) {
+        // Trigger notification
+        // Only if channels include PORTAL (Email would be a backend log)
+        if (rule.channels.includes('PORTAL')) {
+          // Verify if this rule belongs to current user to show in UI
+          if (rule.userId === state.currentUser?.id) {
+            state.addNotification(
+              `Alerta: ${rule.name}`,
+              `O KPI "${kpi.name}" atendeu ao critério: ${rule.triggerCondition}.`,
+            )
+          } else {
+            console.log(
+              `[MOCK EMAIL SENT] To User ${rule.userId} via Rule ${rule.name} for KPI ${kpi.name}`,
+            )
+          }
+        }
+      }
+    })
+  },
 }))
