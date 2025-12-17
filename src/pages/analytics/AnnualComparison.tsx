@@ -37,6 +37,7 @@ import {
   Download,
   FileSpreadsheet,
   Printer,
+  CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -136,7 +137,7 @@ export const AnnualComparison = () => {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in print:space-y-4">
+    <div className="space-y-8 animate-fade-in print:space-y-4 print:p-0">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -145,13 +146,19 @@ export const AnnualComparison = () => {
           <p className="text-muted-foreground mt-1">
             Análise side-by-side de OKRs e KPIs entre períodos fiscais.
           </p>
+          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground print:flex hidden">
+            <CalendarDays className="h-4 w-4" />
+            <span>
+              Períodos: {yearA} vs {yearB}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 no-print">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
-                Exportar
+                Exportar Relatório
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -161,7 +168,7 @@ export const AnnualComparison = () => {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportCSV}>
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Exportar CSV
+                Exportar Dados CSV
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -196,7 +203,7 @@ export const AnnualComparison = () => {
         </div>
       </div>
 
-      <Card className="avoid-break">
+      <Card className="avoid-break shadow-none border print:border-gray-200">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-[#003366]" />
@@ -275,7 +282,7 @@ export const AnnualComparison = () => {
         </CardContent>
       </Card>
 
-      <Card className="page-break avoid-break">
+      <Card className="page-break avoid-break shadow-none border print:border-gray-200">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-[#003366]" />

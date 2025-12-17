@@ -13,7 +13,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, History, HelpCircle, TrendingUp } from 'lucide-react'
+import {
+  ArrowLeft,
+  History,
+  HelpCircle,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { AuditLogTimeline } from '@/components/AuditLogTimeline'
@@ -49,7 +56,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { predictTrend } from '@/lib/kpi-utils'
+import { predictTrend, calculateStatus } from '@/lib/kpi-utils'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -100,10 +109,6 @@ export const KPIDetail = () => {
     forecast: p.value,
     isForecast: true,
   }))
-
-  // Combine data (remove first forecast point if it overlaps exactly with last actual to avoid double label, but needed for continuity)
-  // Recharts handles continuity if data points align.
-  // We need to merge the last actual point with the first forecast point (same date)
 
   let combinedData: any[] = [...actualData]
 
@@ -160,6 +165,8 @@ export const KPIDetail = () => {
 
   // Get next estimated value
   const nextEstimate = forecastData.length > 1 ? forecastData[1].forecast : null
+  const estimatedStatus =
+    nextEstimate !== null ? calculateStatus(nextEstimate, kpi.goal) : null
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -258,14 +265,51 @@ export const KPIDetail = () => {
               </div>
 
               {nextEstimate !== null && (
-                <div className="bg-purple-50 border border-purple-200 rounded-md p-3 mb-4 flex items-center gap-3">
-                  <TrendingUp className="h-5 w-5 text-purple-600" />
-                  <div className="text-sm text-purple-900">
-                    <span className="font-semibold">Tendência Preditiva:</span>{' '}
-                    Estimamos que o valor atinja{' '}
-                    <strong>{nextEstimate?.toLocaleString()}</strong> no próximo
-                    ciclo com base no histórico recente.
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="h-5 w-5 text-purple-600 mt-0.5" />
+                    <div className="text-sm text-purple-900">
+                      <span className="font-semibold block mb-1">
+                        Análise Preditiva
+                      </span>
+                      Estimamos que o valor atinja{' '}
+                      <strong>{nextEstimate?.toLocaleString()}</strong> no
+                      próximo ciclo.
+                    </div>
                   </div>
+
+                  {estimatedStatus && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] text-purple-700 uppercase font-bold tracking-wider mb-1">
+                        Status Estimado
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-0 px-3 py-1 font-medium capitalize flex items-center gap-1',
+                          estimatedStatus === 'GREEN'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : estimatedStatus === 'YELLOW'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-red-100 text-red-800',
+                        )}
+                      >
+                        {estimatedStatus === 'GREEN' && (
+                          <CheckCircle2 className="w-3 h-3" />
+                        )}
+                        {estimatedStatus === 'YELLOW' && (
+                          <AlertTriangle className="w-3 h-3" />
+                        )}
+                        {estimatedStatus === 'RED' && (
+                          <AlertTriangle className="w-3 h-3" />
+                        )}
+
+                        {estimatedStatus === 'GREEN' && 'No Prazo'}
+                        {estimatedStatus === 'YELLOW' && 'Atenção'}
+                        {estimatedStatus === 'RED' && 'Crítico'}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               )}
 

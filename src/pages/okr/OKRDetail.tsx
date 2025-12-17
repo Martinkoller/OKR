@@ -17,6 +17,8 @@ import {
   CalendarRange,
   Clock,
   TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react'
 import { ActionPlanList } from '@/components/ActionPlanList'
 import { calculateOKRProgressForDate, predictTrend } from '@/lib/kpi-utils'
@@ -38,6 +40,8 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart'
+import { cn } from '@/lib/utils'
+import { KPIStatus } from '@/types'
 
 export const OKRDetail = () => {
   const { id } = useParams()
@@ -75,7 +79,6 @@ export const OKRDetail = () => {
   }
 
   // Generate Forecast for OKR based on calculated history
-  // Need to map historyData back to KPIHistoryEntry format for the utility
   const historyForPrediction = historyData.map((h) => ({
     date: h.fullDate,
     value: h.value,
@@ -100,6 +103,13 @@ export const OKRDetail = () => {
   }
 
   const nextEstimate = forecastData.length > 1 ? forecastData[1].forecast : null
+
+  let estimatedStatus: KPIStatus | null = null
+  if (nextEstimate !== null) {
+    if (nextEstimate >= 100) estimatedStatus = 'GREEN'
+    else if (nextEstimate >= 90) estimatedStatus = 'YELLOW'
+    else estimatedStatus = 'RED'
+  }
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -220,15 +230,55 @@ export const OKRDetail = () => {
                     </ComposedChart>
                   </ChartContainer>
                 </div>
+
                 {nextEstimate !== null && (
-                  <div className="mt-4 flex items-center gap-2 text-sm text-purple-700 bg-purple-50 p-2 rounded border border-purple-100">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>
-                      Previsão para o próximo mês:{' '}
-                      <strong>
-                        {Math.min(100, Math.round(nextEstimate))}%
-                      </strong>
-                    </span>
+                  <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <TrendingUp className="h-5 w-5 text-purple-600 mt-0.5" />
+                      <div className="text-sm text-purple-900">
+                        <span className="font-semibold block mb-1">
+                          Previsão de Progresso
+                        </span>
+                        Se a tendência se mantiver, esperamos atingir{' '}
+                        <strong>
+                          {Math.min(100, Math.round(nextEstimate))}%
+                        </strong>{' '}
+                        no próximo mês.
+                      </div>
+                    </div>
+
+                    {estimatedStatus && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] text-purple-700 uppercase font-bold tracking-wider mb-1">
+                          Status Estimado
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'border-0 px-3 py-1 font-medium capitalize flex items-center gap-1',
+                            estimatedStatus === 'GREEN'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : estimatedStatus === 'YELLOW'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-red-100 text-red-800',
+                          )}
+                        >
+                          {estimatedStatus === 'GREEN' && (
+                            <CheckCircle2 className="w-3 h-3" />
+                          )}
+                          {estimatedStatus === 'YELLOW' && (
+                            <AlertTriangle className="w-3 h-3" />
+                          )}
+                          {estimatedStatus === 'RED' && (
+                            <AlertTriangle className="w-3 h-3" />
+                          )}
+
+                          {estimatedStatus === 'GREEN' && 'No Prazo'}
+                          {estimatedStatus === 'YELLOW' && 'Atenção'}
+                          {estimatedStatus === 'RED' && 'Crítico'}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
