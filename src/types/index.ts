@@ -45,12 +45,16 @@ export type KPI = {
   history: KPIHistoryEntry[]
 }
 
+export type OKRScope = 'ANNUAL' | 'MULTI_YEAR'
+
 export type OKR = {
   id: string
   title: string
   description?: string
   buId: string
-  year: number
+  scope: OKRScope
+  startYear: number
+  endYear: number
   weight: number // Strategic Weight 1-5 or 1-100
   ownerId: string
   kpiIds: string[]

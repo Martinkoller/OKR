@@ -9,6 +9,7 @@ import { OKRList } from './pages/okr/OKRList'
 import { OKRDetail } from './pages/okr/OKRDetail'
 import { KPIList } from './pages/kpi/KPIList'
 import { KPIDetail } from './pages/kpi/KPIDetail'
+import { AnnualComparison } from './pages/analytics/AnnualComparison'
 import { Admin } from './pages/admin/Admin'
 import Documentation from './pages/documentation/Documentation'
 import NotificationSettings from './pages/settings/NotificationSettings'
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/okrs/:id" element={<OKRDetail />} />
           <Route path="/kpis" element={<KPIList />} />
           <Route path="/kpis/:id" element={<KPIDetail />} />
+          <Route path="/analytics/comparison" element={<AnnualComparison />} />
           <Route
             path="/audit"
             element={

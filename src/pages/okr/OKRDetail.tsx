@@ -10,7 +10,8 @@ import {
 import { StatusBadge } from '@/components/StatusBadge'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, ExternalLink, CalendarRange, Clock } from 'lucide-react'
 import { ActionPlanList } from '@/components/ActionPlanList'
 
 export const OKRDetail = () => {
@@ -44,9 +45,25 @@ export const OKRDetail = () => {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardDescription className="mb-2">
-                    OKR Estratégico {okr.year}
-                  </CardDescription>
+                  <div className="flex items-center gap-2 mb-2">
+                    {okr.scope === 'MULTI_YEAR' ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-800 border-0"
+                      >
+                        <CalendarRange className="w-3 h-3 mr-1" />
+                        Plurianual {okr.startYear}-{okr.endYear}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-gray-600 border-gray-200"
+                      >
+                        <Clock className="w-3 h-3 mr-1" />
+                        Ciclo {okr.startYear}
+                      </Badge>
+                    )}
+                  </div>
                   <CardTitle className="text-2xl">{okr.title}</CardTitle>
                 </div>
                 <StatusBadge
@@ -162,8 +179,18 @@ export const OKRDetail = () => {
                 <span className="font-medium">{okr.buId}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Ciclo</span>
-                <span className="font-medium">{okr.year}</span>
+                <span className="text-muted-foreground">Início</span>
+                <span className="font-medium">{okr.startYear}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Fim</span>
+                <span className="font-medium">{okr.endYear}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Escopo</span>
+                <span className="font-medium">
+                  {okr.scope === 'MULTI_YEAR' ? 'Plurianual' : 'Anual'}
+                </span>
               </div>
             </CardContent>
           </Card>

@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Building2,
   BookOpen,
+  TrendingUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +48,11 @@ const SidebarContent = () => {
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/okrs', label: 'OKRs', icon: Target },
     { href: '/kpis', label: 'KPIs', icon: BarChart2 },
+    {
+      href: '/analytics/comparison',
+      label: 'Comparativo Anual',
+      icon: TrendingUp,
+    },
     { href: '/audit', label: 'Auditoria', icon: ShieldCheck },
     { href: '/documentation', label: 'Documentação', icon: BookOpen },
     { href: '/admin', label: 'Administração', icon: Settings },
@@ -132,7 +138,7 @@ const SidebarContent = () => {
       <div className="p-4 border-t border-white/10 text-xs text-white/50 text-center">
         Ciclo Estratégico 2024
         <br />
-        v1.0.2
+        v1.1.0
       </div>
     </div>
   )

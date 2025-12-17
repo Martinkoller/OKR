@@ -1,13 +1,15 @@
 import { useDataStore } from '@/stores/useDataStore'
 import { useUserStore } from '@/stores/useUserStore'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Search, Plus, CalendarRange, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
+import { OKR } from '@/types'
 
 export const OKRList = () => {
   const { okrs } = useDataStore()
@@ -20,6 +22,13 @@ export const OKRList = () => {
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
     return matchesBU && matchesSearch
+  })
+
+  // Sort: Multi-year first, then by year
+  const sortedOKRs = filteredOKRs.sort((a, b) => {
+    if (a.scope === 'MULTI_YEAR' && b.scope !== 'MULTI_YEAR') return -1
+    if (a.scope !== 'MULTI_YEAR' && b.scope === 'MULTI_YEAR') return 1
+    return b.startYear - a.startYear
   })
 
   return (
@@ -47,14 +56,31 @@ export const OKRList = () => {
       </div>
 
       <div className="grid gap-6">
-        {filteredOKRs.map((okr) => (
+        {sortedOKRs.map((okr: OKR) => (
           <Card key={okr.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    {okr.scope === 'MULTI_YEAR' ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-800 hover:bg-purple-200 border-0"
+                      >
+                        <CalendarRange className="w-3 h-3 mr-1" />
+                        Plurianual {okr.startYear}-{okr.endYear}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-gray-600 border-gray-200"
+                      >
+                        <Clock className="w-3 h-3 mr-1" />
+                        Ciclo {okr.startYear}
+                      </Badge>
+                    )}
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {okr.year} • Peso {okr.weight}
+                      Peso {okr.weight}
                     </span>
                   </div>
                   <Link

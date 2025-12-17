@@ -75,6 +75,20 @@ export const MOCK_KPIS: KPI[] = [
     status: 'YELLOW',
     lastUpdated: '2024-06-01T10:00:00Z',
     history: [
+      // 2023 History for Comparison
+      {
+        date: '2023-12-01',
+        value: 1000000,
+        updatedByUserId: 'u-2',
+        timestamp: '2023-12-01T10:00:00Z',
+      },
+      {
+        date: '2023-06-01',
+        value: 900000,
+        updatedByUserId: 'u-2',
+        timestamp: '2023-06-01T10:00:00Z',
+      },
+      // 2024 History
       {
         date: '2024-01-01',
         value: 1200000,
@@ -129,6 +143,12 @@ export const MOCK_KPIS: KPI[] = [
     lastUpdated: '2024-06-01T10:00:00Z',
     history: [
       {
+        date: '2023-12-01',
+        value: 50,
+        updatedByUserId: 'u-3',
+        timestamp: '2023-12-01T10:00:00Z',
+      },
+      {
         date: '2024-04-01',
         value: 55,
         updatedByUserId: 'u-3',
@@ -164,6 +184,12 @@ export const MOCK_KPIS: KPI[] = [
     lastUpdated: '2024-06-15T10:00:00Z',
     history: [
       {
+        date: '2023-12-01',
+        value: 28,
+        updatedByUserId: 'u-3',
+        timestamp: '2023-12-01T10:00:00Z',
+      },
+      {
         date: '2024-01-01',
         value: 32,
         updatedByUserId: 'u-3',
@@ -191,7 +217,9 @@ export const MOCK_OKRS: OKR[] = [
     title: 'Dominar Mercado SMB no Varejo',
     description: 'Expandir market share agressivamente',
     buId: 'bu-1',
-    year: 2024,
+    scope: 'ANNUAL',
+    startYear: 2024,
+    endYear: 2024,
     weight: 100,
     ownerId: 'u-2',
     kpiIds: ['kpi-1', 'kpi-2'],
@@ -203,12 +231,28 @@ export const MOCK_OKRS: OKR[] = [
     title: 'Excelência em Talent Acquisition',
     description: 'Melhorar eficiência do time de RH',
     buId: 'bu-2',
-    year: 2024,
+    scope: 'ANNUAL',
+    startYear: 2024,
+    endYear: 2024,
     weight: 80,
     ownerId: 'u-3',
     kpiIds: ['kpi-3'],
-    progress: 50, // Calculated manually as 45/30 is bad, but logic sets it. Wait, 45 days is > 30 goal.
+    progress: 50,
     status: 'RED',
+  },
+  {
+    id: 'okr-3',
+    title: 'Transformação Digital Plurianual',
+    description: 'Migração completa de sistemas legados e adoção de IA',
+    buId: 'bu-5',
+    scope: 'MULTI_YEAR',
+    startYear: 2024,
+    endYear: 2026,
+    weight: 100,
+    ownerId: 'u-1',
+    kpiIds: ['kpi-1'], // Sharing KPI for demo purposes
+    progress: 60,
+    status: 'GREEN',
   },
 ]
 
