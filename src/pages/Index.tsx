@@ -10,29 +10,31 @@ import {
 import { StatusBadge } from '@/components/StatusBadge'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, AlertTriangle, CheckCircle2, Target } from 'lucide-react'
+import {
+  ArrowRight,
+  AlertTriangle,
+  CheckCircle2,
+  Target,
+  BarChart2,
+  ClipboardList,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from '@/components/ui/chart'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis } from 'recharts'
+import { Badge } from '@/components/ui/badge'
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-} from 'recharts'
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export default function Index() {
   const { selectedBUId } = useUserStore()
-  const { okrs, kpis } = useDataStore()
+  const { okrs, kpis, actionPlans } = useDataStore()
 
   // Filter data based on BU
   const filteredOKRs =
@@ -85,6 +87,15 @@ export default function Index() {
     { month: 'Mai', progress: 60 },
     { month: 'Jun', progress: avgProgress },
   ]
+
+  const hasActionPlan = (entityId: string) => {
+    return actionPlans.some(
+      (p) =>
+        p.entityId === entityId &&
+        p.status !== 'COMPLETED' &&
+        p.status !== 'CANCELLED',
+    )
+  }
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -246,9 +257,12 @@ export default function Index() {
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium line-clamp-1">
+                        <Link
+                          to={`/kpis/${kpi.id}`}
+                          className="text-sm font-medium line-clamp-1 hover:underline hover:text-blue-700"
+                        >
                           {kpi.name}
-                        </span>
+                        </Link>
                         {kpi.weight >= 40 && (
                           <Badge
                             variant="secondary"
@@ -258,9 +272,21 @@ export default function Index() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Meta: {kpi.goal} {kpi.unit}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Meta: {kpi.goal} {kpi.unit}
+                        </p>
+                        {hasActionPlan(kpi.id) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ClipboardList className="h-3 w-3 text-blue-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Possui Plano de Ação ativo</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge
@@ -294,16 +320,33 @@ export default function Index() {
             {filteredOKRs.map((okr) => (
               <div key={okr.id} className="group">
                 <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <Link
-                      to={`/okrs/${okr.id}`}
-                      className="font-semibold text-gray-900 hover:underline hover:text-[#003366] transition-colors"
-                    >
-                      {okr.title}
-                    </Link>
-                    <p className="text-sm text-muted-foreground">
-                      {okr.description}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <Link
+                        to={`/okrs/${okr.id}`}
+                        className="font-semibold text-gray-900 hover:underline hover:text-[#003366] transition-colors"
+                      >
+                        {okr.title}
+                      </Link>
+                      <p className="text-sm text-muted-foreground">
+                        {okr.description}
+                      </p>
+                    </div>
+                    {hasActionPlan(okr.id) && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="ml-2 gap-1 border-blue-200 bg-blue-50 text-blue-700"
+                          >
+                            <ClipboardList className="h-3 w-3" /> Plano Ativo
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Existe um plano de ação vinculado a este OKR.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">

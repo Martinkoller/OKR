@@ -1,6 +1,14 @@
 import { create } from 'zustand'
-import { OKR, KPI, AuditEntry, KPIStatus, KPIHistoryEntry } from '@/types'
-import { format } from 'date-fns'
+import {
+  OKR,
+  KPI,
+  AuditEntry,
+  KPIStatus,
+  KPIHistoryEntry,
+  ActionPlan,
+  ActionPlanTask,
+  ActionPlanStatus,
+} from '@/types'
 
 // Helpers
 const calculateStatus = (value: number, goal: number): KPIStatus => {
@@ -79,11 +87,10 @@ const INITIAL_KPIs: KPI[] = [
     frequency: 'MONTHLY',
     type: 'QUANT',
     unit: '%',
-    goal: 5, // Here specifically lower is better logic might apply, but keeping simple for now (Target > Actual logic usually, but let's assume goal is a threshold to beat or reach)
-    // For Churn, usually lower is better. Let's simplify and say Goal is a 'Retention Rate' equivalent of 95%
+    goal: 5,
     weight: 30,
-    currentValue: 4, // If this was retention, 96%
-    status: 'RED', // Mocking red for visual
+    currentValue: 4,
+    status: 'RED',
     lastUpdated: new Date().toISOString(),
     history: [],
   },
@@ -116,9 +123,42 @@ const INITIAL_OKRS: OKR[] = [
   },
 ]
 
+const INITIAL_ACTION_PLANS: ActionPlan[] = [
+  {
+    id: 'ap-1',
+    title: 'Recuperação de Churn',
+    description:
+      'Plano intensivo para retenção de clientes na base com risco de cancelamento.',
+    entityId: 'kpi-3',
+    entityType: 'KPI',
+    status: 'IN_PROGRESS',
+    dueDate: '2024-12-31',
+    ownerId: 'user-1',
+    tasks: [
+      {
+        id: 't-1',
+        description: 'Mapear clientes com risco > 80%',
+        ownerId: 'user-2',
+        deadline: '2024-10-15',
+        status: 'DONE',
+      },
+      {
+        id: 't-2',
+        description: 'Ligar para top 20 clientes em risco',
+        ownerId: 'user-1',
+        deadline: '2024-10-30',
+        status: 'PENDING',
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+]
+
 interface DataState {
   okrs: OKR[]
   kpis: KPI[]
+  actionPlans: ActionPlan[]
   auditLogs: AuditEntry[]
 
   updateKPI: (
@@ -129,12 +169,15 @@ interface DataState {
     isRetroactive?: boolean,
     reason?: string,
   ) => void
+
+  saveActionPlan: (plan: ActionPlan, userId: string) => void
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
 }
 
-export const useDataStore = create<DataState>((set, get) => ({
+export const useDataStore = create<DataState>((set) => ({
   okrs: INITIAL_OKRS,
   kpis: INITIAL_KPIs,
+  actionPlans: INITIAL_ACTION_PLANS,
   auditLogs: [
     {
       id: 'log-1',
@@ -203,6 +246,55 @@ export const useDataStore = create<DataState>((set, get) => ({
       return {
         kpis: newKPIs,
         okrs: newOKRs,
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  saveActionPlan: (plan, userId) => {
+    set((state) => {
+      const existingIndex = state.actionPlans.findIndex((p) => p.id === plan.id)
+      let newPlans = [...state.actionPlans]
+      let action: 'CREATE' | 'UPDATE' = 'CREATE'
+      let oldValue = undefined
+      let newValue = plan.status
+
+      if (existingIndex >= 0) {
+        action = 'UPDATE'
+        oldValue = state.actionPlans[existingIndex].status
+        newPlans[existingIndex] = {
+          ...plan,
+          updatedAt: new Date().toISOString(),
+        }
+      } else {
+        newPlans = [
+          {
+            ...plan,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          ...state.actionPlans,
+        ]
+      }
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: plan.id,
+        entityType: 'ACTION_PLAN',
+        action,
+        field: 'status',
+        oldValue,
+        newValue,
+        reason:
+          action === 'CREATE'
+            ? 'Criação de Plano de Ação'
+            : 'Atualização de Plano de Ação',
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+
+      return {
+        actionPlans: newPlans,
         auditLogs: [auditEntry, ...state.auditLogs],
       }
     })

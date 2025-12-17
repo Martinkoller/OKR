@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ActionPlanList } from '@/components/ActionPlanList'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -187,6 +188,9 @@ export const KPIDetail = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Action Plans Section */}
+          <ActionPlanList entityId={kpi.id} entityType="KPI" />
 
           <Card>
             <CardHeader>

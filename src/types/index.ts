@@ -58,10 +58,39 @@ export type OKR = {
   status: KPIStatus
 }
 
+export type ActionPlanStatus =
+  | 'DRAFT'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+export type TaskStatus = 'PENDING' | 'DONE' | 'OVERDUE'
+
+export type ActionPlanTask = {
+  id: string
+  description: string
+  ownerId: string
+  deadline: string // ISO Date
+  status: TaskStatus
+}
+
+export type ActionPlan = {
+  id: string
+  title: string
+  description: string
+  entityId: string // KPI ID or OKR ID
+  entityType: 'KPI' | 'OKR'
+  status: ActionPlanStatus
+  dueDate: string // ISO Date
+  ownerId: string
+  tasks: ActionPlanTask[]
+  createdAt: string
+  updatedAt: string
+}
+
 export type AuditEntry = {
   id: string
   entityId: string
-  entityType: 'KPI' | 'OKR'
+  entityType: 'KPI' | 'OKR' | 'ACTION_PLAN'
   action: 'CREATE' | 'UPDATE' | 'DELETE'
   field?: string
   oldValue?: string | number

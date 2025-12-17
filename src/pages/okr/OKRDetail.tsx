@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ActionPlanList } from '@/components/ActionPlanList'
 
 export const OKRDetail = () => {
   const { id } = useParams()
@@ -77,6 +78,9 @@ export const OKRDetail = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Action Plans Section */}
+          <ActionPlanList entityId={okr.id} entityType="OKR" />
 
           <Card>
             <CardHeader>
