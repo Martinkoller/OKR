@@ -1,14 +1,15 @@
-/* Main App Component - Handles routing (using react-router-dom), query client and other providers - use this file to add all routes */
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
-import Layout from './components/Layout'
-
-// ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
-// AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
+import { OKRList } from './pages/okr/OKRList'
+import { OKRDetail } from './pages/okr/OKRDetail'
+import { KPIList } from './pages/kpi/KPIList'
+import { KPIDetail } from './pages/kpi/KPIDetail'
+import { Admin } from './pages/admin/Admin'
 
 const App = () => (
   <BrowserRouter
@@ -20,7 +21,20 @@ const App = () => (
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
+          <Route path="/okrs" element={<OKRList />} />
+          <Route path="/okrs/:id" element={<OKRDetail />} />
+          <Route path="/kpis" element={<KPIList />} />
+          <Route path="/kpis/:id" element={<KPIDetail />} />
+          <Route
+            path="/audit"
+            element={
+              <div className="p-8">
+                Página de Auditoria Completa (Em Desenvolvimento - ver detalhes
+                no KPI)
+              </div>
+            }
+          />
+          <Route path="/admin" element={<Admin />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
