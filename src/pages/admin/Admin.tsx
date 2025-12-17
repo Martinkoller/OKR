@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Users, Building, Settings2 } from 'lucide-react'
+import { Plus, Building, Settings2, ExternalLink } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export const Admin = () => {
   return (
@@ -17,15 +18,12 @@ export const Admin = () => {
       <div>
         <h1 className="text-2xl font-bold">Administração</h1>
         <p className="text-muted-foreground">
-          Gerencie usuários, BUs e configurações do sistema.
+          Gerencie BUs e configurações globais do sistema.
         </p>
       </div>
 
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs defaultValue="bus" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="h-4 w-4" /> Usuários
-          </TabsTrigger>
           <TabsTrigger value="bus" className="gap-2">
             <Building className="h-4 w-4" /> Unidades de Negócio
           </TabsTrigger>
@@ -33,30 +31,6 @@ export const Admin = () => {
             <Settings2 className="h-4 w-4" /> Parâmetros
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestão de Usuários</CardTitle>
-                <CardDescription>
-                  Adicione ou remova acesso ao portal.
-                </CardDescription>
-              </div>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> Novo Usuário
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center mb-4">
-                <Input placeholder="Buscar usuário..." className="max-w-sm" />
-              </div>
-              <div className="border rounded-md p-8 text-center text-muted-foreground">
-                Tabela de usuários mockada (não funcional nesta demo).
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="bus">
           <Card>
@@ -101,7 +75,20 @@ export const Admin = () => {
                 <Label>E-mail para Notificações de Alerta</Label>
                 <Input defaultValue="alertas@zucchetti.com.br" />
               </div>
-              <Button>Salvar Alterações</Button>
+              <div className="pt-4 border-t mt-4">
+                <h3 className="font-medium mb-2">Outras Configurações</h3>
+                <Button
+                  variant="outline"
+                  asChild
+                  className="w-full justify-start"
+                >
+                  <Link to="/settings/users">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Gerenciar Usuários e Permissões
+                  </Link>
+                </Button>
+              </div>
+              <Button className="mt-4">Salvar Alterações</Button>
             </CardContent>
           </Card>
         </TabsContent>

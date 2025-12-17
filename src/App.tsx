@@ -13,6 +13,7 @@ import { AnnualComparison } from './pages/analytics/AnnualComparison'
 import { Admin } from './pages/admin/Admin'
 import Documentation from './pages/documentation/Documentation'
 import NotificationSettings from './pages/settings/NotificationSettings'
+import { Users } from './pages/settings/Users'
 
 const App = () => (
   <BrowserRouter
@@ -43,6 +44,7 @@ const App = () => (
             path="/settings/notifications"
             element={<NotificationSettings />}
           />
+          <Route path="/settings/users" element={<Users />} />
           <Route path="/admin" element={<Admin />} />
         </Route>
         <Route path="*" element={<NotFound />} />

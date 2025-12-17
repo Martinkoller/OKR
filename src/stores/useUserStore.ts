@@ -20,6 +20,11 @@ interface UserState {
   addNotification: (title: string, message: string) => void
   markNotificationAsRead: (id: string) => void
 
+  // User Management
+  addUser: (user: User) => void
+  updateUser: (user: User) => void
+  deleteUser: (userId: string) => void
+
   // Notification Rules
   addRule: (rule: NotificationRule) => void
   updateRule: (rule: NotificationRule) => void
@@ -85,6 +90,16 @@ export const useUserStore = create<UserState>((set, get) => ({
       ),
     })),
 
+  addUser: (user) => set((state) => ({ users: [...state.users, user] })),
+  updateUser: (user) =>
+    set((state) => ({
+      users: state.users.map((u) => (u.id === user.id ? user : u)),
+    })),
+  deleteUser: (userId) =>
+    set((state) => ({
+      users: state.users.filter((u) => u.id !== userId),
+    })),
+
   addRule: (rule) =>
     set((state) => ({
       notificationRules: [...state.notificationRules, rule],
@@ -102,20 +117,12 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   processKPINotification: (kpi, oldStatus, isRetroactive) => {
     const state = get()
-    // For this demo, we check rules for the CURRENT user only to show the notification
-    // In a real backend, we would check all users.
-    // To simulate "Routing", we will iterate all mock rules.
-
     const activeRules = state.notificationRules.filter((r) => r.isActive)
 
     activeRules.forEach((rule) => {
-      // 1. Check BU Scope
       if (rule.buId !== 'ALL' && rule.buId !== kpi.buId) return
-
-      // 2. Check KPI Type
       if (rule.kpiType !== 'ALL' && rule.kpiType !== kpi.type) return
 
-      // 3. Check Condition
       let shouldNotify = false
       if (
         rule.triggerCondition === 'STATUS_RED' &&
@@ -136,10 +143,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       }
 
       if (shouldNotify) {
-        // Trigger notification
-        // Only if channels include PORTAL (Email would be a backend log)
         if (rule.channels.includes('PORTAL')) {
-          // Verify if this rule belongs to current user to show in UI
           if (rule.userId === state.currentUser?.id) {
             state.addNotification(
               `Alerta: ${rule.name}`,

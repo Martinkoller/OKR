@@ -13,6 +13,7 @@ export type User = {
   role: Role
   buIds: string[] // User can belong to multiple BUs
   avatarUrl?: string
+  active: boolean
 }
 
 export type KPIFrequency = 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SEMESTERLY'

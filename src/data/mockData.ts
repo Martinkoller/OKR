@@ -16,6 +16,7 @@ export const MOCK_USERS: User[] = [
     role: 'DIRECTOR_GENERAL',
     buIds: ['bu-1', 'bu-2', 'bu-3', 'bu-4', 'bu-5'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=99',
+    active: true,
   },
   {
     id: 'u-2',
@@ -24,6 +25,7 @@ export const MOCK_USERS: User[] = [
     role: 'DIRECTOR_BU',
     buIds: ['bu-1'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=female&seed=12',
+    active: true,
   },
   {
     id: 'u-3',
@@ -32,6 +34,7 @@ export const MOCK_USERS: User[] = [
     role: 'DIRECTOR_BU',
     buIds: ['bu-2'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=45',
+    active: true,
   },
   {
     id: 'u-4',
@@ -40,6 +43,7 @@ export const MOCK_USERS: User[] = [
     role: 'GPM',
     buIds: ['bu-1', 'bu-3'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=33',
+    active: true,
   },
   {
     id: 'u-5',
@@ -48,6 +52,7 @@ export const MOCK_USERS: User[] = [
     role: 'PM',
     buIds: ['bu-4'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=female&seed=21',
+    active: false,
   },
   {
     id: 'u-6',
@@ -56,6 +61,7 @@ export const MOCK_USERS: User[] = [
     role: 'VIEWER',
     buIds: ['bu-1'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=10',
+    active: true,
   },
 ]
 

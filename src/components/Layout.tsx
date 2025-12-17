@@ -21,6 +21,7 @@ import {
   PieChart,
   ShieldCheck,
   UserCircle,
+  Users,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/useUserStore'
@@ -32,6 +33,8 @@ export default function Layout() {
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + '/')
+
+  const isAdmin = currentUser?.role === 'DIRECTOR_GENERAL'
 
   return (
     <SidebarProvider>
@@ -114,10 +117,23 @@ export default function Layout() {
                   >
                     <Link to="/settings/notifications">
                       <Settings className="h-4 w-4" />
-                      <span>Configurações</span>
+                      <span>Notificações</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {isAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/settings/users')}
+                    >
+                      <Link to="/settings/users">
+                        <Users className="h-4 w-4" />
+                        <span>Usuários</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
               <div className="mt-4 flex items-center gap-3 px-2">
                 <Avatar className="h-8 w-8">
