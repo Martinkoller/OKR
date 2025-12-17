@@ -11,8 +11,33 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ExternalLink, CalendarRange, Clock } from 'lucide-react'
+import {
+  ArrowLeft,
+  ExternalLink,
+  CalendarRange,
+  Clock,
+  TrendingUp,
+} from 'lucide-react'
 import { ActionPlanList } from '@/components/ActionPlanList'
+import { calculateOKRProgressForDate, predictTrend } from '@/lib/kpi-utils'
+import { format, subMonths, parseISO, addMonths } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  ComposedChart,
+} from 'recharts'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart'
 
 export const OKRDetail = () => {
   const { id } = useParams()
@@ -26,12 +51,62 @@ export const OKRDetail = () => {
 
   const linkedKPIs = kpis.filter((k) => okr.kpiIds.includes(k.id))
 
+  // Simulate/Calculate History for the last 6 months
+  const today = new Date()
+  const historyData: any[] = []
+
+  for (let i = 5; i >= 0; i--) {
+    const date = subMonths(today, i)
+    // End of that month
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+
+    // Only go up to current date (approx)
+    if (endOfMonth > today) {
+      // use today
+    }
+
+    const { progress } = calculateOKRProgressForDate(okr, kpis, endOfMonth)
+    historyData.push({
+      date: format(endOfMonth, 'dd/MM', { locale: ptBR }),
+      fullDate: endOfMonth.toISOString(),
+      value: progress,
+      forecast: null,
+    })
+  }
+
+  // Generate Forecast for OKR based on calculated history
+  // Need to map historyData back to KPIHistoryEntry format for the utility
+  const historyForPrediction = historyData.map((h) => ({
+    date: h.fullDate,
+    value: h.value,
+    timestamp: h.fullDate,
+    updatedByUserId: 'system',
+  }))
+
+  const forecastPoints = predictTrend(historyForPrediction, 3)
+  const forecastData = forecastPoints.map((p) => ({
+    date: format(parseISO(p.date), 'dd/MM', { locale: ptBR }),
+    value: null,
+    forecast: p.value,
+  }))
+
+  // Merge for chart
+  let combinedData = [...historyData]
+  if (forecastData.length > 0) {
+    // Link the lines
+    const lastIndex = combinedData.length - 1
+    combinedData[lastIndex].forecast = combinedData[lastIndex].value
+    combinedData = [...combinedData, ...forecastData.slice(1)]
+  }
+
+  const nextEstimate = forecastData.length > 1 ? forecastData[1].forecast : null
+
   return (
     <div className="space-y-8 animate-fade-in">
       <Button
         variant="ghost"
         asChild
-        className="pl-0 hover:pl-2 transition-all"
+        className="pl-0 hover:pl-2 transition-all no-print"
       >
         <Link to="/okrs">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para OKRs
@@ -82,9 +157,7 @@ export const OKRDetail = () => {
 
               <div className="bg-muted/30 p-4 rounded-lg border">
                 <div className="flex justify-between items-end mb-2">
-                  <span className="text-sm font-medium">
-                    Progresso Geral Calculado
-                  </span>
+                  <span className="text-sm font-medium">Progresso Geral</span>
                   <span className="text-2xl font-bold">{okr.progress}%</span>
                 </div>
                 <Progress value={okr.progress} className="h-3" />
@@ -93,13 +166,81 @@ export const OKRDetail = () => {
                   KPIs vinculados.
                 </p>
               </div>
+
+              {/* Forecast Chart */}
+              <div className="pt-4">
+                <h3 className="font-medium text-sm text-gray-900 mb-4">
+                  Tendência e Previsão (6 Meses)
+                </h3>
+                <div className="h-[250px] w-full">
+                  <ChartContainer
+                    config={{
+                      value: { label: 'Progresso Real', color: '#003366' },
+                      forecast: { label: 'Estimativa', color: '#9333ea' },
+                    }}
+                  >
+                    <ComposedChart
+                      data={combinedData}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        fontSize={12}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => `${v}%`}
+                        fontSize={12}
+                        domain={[0, 100]}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        stroke="var(--color-value)"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="forecast"
+                        stroke="var(--color-forecast)"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </ComposedChart>
+                  </ChartContainer>
+                </div>
+                {nextEstimate !== null && (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-purple-700 bg-purple-50 p-2 rounded border border-purple-100">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>
+                      Previsão para o próximo mês:{' '}
+                      <strong>
+                        {Math.min(100, Math.round(nextEstimate))}%
+                      </strong>
+                    </span>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* Action Plans Section */}
-          <ActionPlanList entityId={okr.id} entityType="OKR" />
+          <div className="no-print">
+            <ActionPlanList entityId={okr.id} entityType="OKR" />
+          </div>
 
-          <Card>
+          <Card className="page-break">
             <CardHeader>
               <CardTitle>KPIs Vinculados</CardTitle>
               <CardDescription>
@@ -120,7 +261,7 @@ export const OKRDetail = () => {
                         </span>
                         <Link
                           to={`/kpis/${kpi.id}`}
-                          className="text-muted-foreground hover:text-primary"
+                          className="text-muted-foreground hover:text-primary no-print"
                         >
                           <ExternalLink className="h-3 w-3" />
                         </Link>

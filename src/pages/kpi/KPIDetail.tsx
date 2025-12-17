@@ -13,12 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  ArrowLeft,
-  History,
-  LineChart as LineChartIcon,
-  HelpCircle,
-} from 'lucide-react'
+import { ArrowLeft, History, HelpCircle, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { AuditLogTimeline } from '@/components/AuditLogTimeline'
@@ -37,12 +32,15 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  Tooltip as RechartsTooltip,
+  ComposedChart,
+  Line,
 } from 'recharts'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from '@/components/ui/chart'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -51,6 +49,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { predictTrend } from '@/lib/kpi-utils'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -70,19 +69,53 @@ export const KPIDetail = () => {
   }
 
   // Chart Data Preparation
-  const chartData = kpi.history
-    .map((entry) => ({
-      date: format(parseISO(entry.date), 'dd/MM', { locale: ptBR }),
-      value: entry.value,
-    }))
-    .reverse() // Assuming history is newest first, we want oldest first for chart
+  const rawHistory = [...kpi.history]
+  // Sort oldest first
+  rawHistory.sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
+
+  const actualData = rawHistory.map((entry) => ({
+    date: format(parseISO(entry.date), 'dd/MM', { locale: ptBR }),
+    value: entry.value,
+    forecast: null,
+    isForecast: false,
+  }))
 
   // If history is empty, show current
-  if (chartData.length === 0) {
-    chartData.push({
+  if (actualData.length === 0) {
+    actualData.push({
       date: format(new Date(), 'dd/MM'),
       value: kpi.currentValue,
+      forecast: null,
+      isForecast: false,
     })
+  }
+
+  // Generate Forecast
+  const forecastPoints = predictTrend(kpi.history, 3)
+  const forecastData = forecastPoints.map((p) => ({
+    date: format(parseISO(p.date), 'dd/MM', { locale: ptBR }),
+    value: null,
+    forecast: p.value,
+    isForecast: true,
+  }))
+
+  // Combine data (remove first forecast point if it overlaps exactly with last actual to avoid double label, but needed for continuity)
+  // Recharts handles continuity if data points align.
+  // We need to merge the last actual point with the first forecast point (same date)
+
+  let combinedData: any[] = [...actualData]
+
+  if (forecastData.length > 0) {
+    // The first forecast point is the same date as last actual.
+    // We update the last actual data point to include 'forecast' value equal to 'value'
+    // so the forecast line connects there.
+    const lastActualIndex = combinedData.length - 1
+    combinedData[lastActualIndex].forecast = combinedData[lastActualIndex].value
+
+    // Append the rest of forecast points (skipping the first one which was the anchor)
+    combinedData = [...combinedData, ...forecastData.slice(1)]
   }
 
   const handleUpdate = () => {
@@ -125,9 +158,12 @@ export const KPIDetail = () => {
     setIsDialogOpen(false)
   }
 
+  // Get next estimated value
+  const nextEstimate = forecastData.length > 1 ? forecastData[1].forecast : null
+
   return (
     <div className="space-y-8 animate-fade-in">
-      <Button variant="ghost" asChild className="pl-0">
+      <Button variant="ghost" asChild className="pl-0 no-print">
         <Link to="/kpis">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para KPIs
         </Link>
@@ -155,11 +191,17 @@ export const KPIDetail = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px] w-full mb-6">
+              <div className="h-[300px] w-full mb-6">
                 <ChartContainer
-                  config={{ value: { label: 'Valor', color: '#2563eb' } }}
+                  config={{
+                    value: { label: 'Histórico', color: '#2563eb' },
+                    forecast: { label: 'Previsão', color: '#9333ea' },
+                  }}
                 >
-                  <AreaChart data={chartData}>
+                  <ComposedChart
+                    data={combinedData}
+                    margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                  >
                     <defs>
                       <linearGradient
                         id="fillValue"
@@ -194,17 +236,41 @@ export const KPIDetail = () => {
                       domain={['auto', 'auto']}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
                     <Area
-                      type="natural"
+                      type="monotone"
                       dataKey="value"
                       stroke="var(--color-value)"
                       fill="url(#fillValue)"
+                      strokeWidth={2}
                     />
-                  </AreaChart>
+                    <Line
+                      type="monotone"
+                      dataKey="forecast"
+                      stroke="var(--color-forecast)"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 4, fill: 'var(--color-forecast)' }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </ComposedChart>
                 </ChartContainer>
               </div>
+
+              {nextEstimate !== null && (
+                <div className="bg-purple-50 border border-purple-200 rounded-md p-3 mb-4 flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-purple-600" />
+                  <div className="text-sm text-purple-900">
+                    <span className="font-semibold">Tendência Preditiva:</span>{' '}
+                    Estimamos que o valor atinja{' '}
+                    <strong>{nextEstimate?.toLocaleString()}</strong> no próximo
+                    ciclo com base no histórico recente.
+                  </div>
+                </div>
+              )}
+
               {/* Update Form */}
-              <div className="space-y-4 pt-4 border-t">
+              <div className="space-y-4 pt-4 border-t no-print">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium">Atualizar Medição</h3>
                   <Link
@@ -277,9 +343,11 @@ export const KPIDetail = () => {
             </CardContent>
           </Card>
 
-          <ActionPlanList entityId={kpi.id} entityType="KPI" />
+          <div className="no-print">
+            <ActionPlanList entityId={kpi.id} entityType="KPI" />
+          </div>
 
-          <Card>
+          <Card className="page-break">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <History className="h-5 w-5 text-muted-foreground" />

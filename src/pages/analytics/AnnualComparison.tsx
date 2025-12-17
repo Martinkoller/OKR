@@ -27,14 +27,26 @@ import {
 import {
   calculateOKRProgressForYear,
   getKPIValueForYear,
+  downloadCSV,
 } from '@/lib/kpi-utils'
 import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
   TrendingUp,
+  Download,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { format } from 'date-fns'
 
 export const AnnualComparison = () => {
   const { okrs, kpis } = useDataStore()
@@ -67,8 +79,64 @@ export const AnnualComparison = () => {
     return <ArrowRight className="h-4 w-4" />
   }
 
+  const handleExportCSV = () => {
+    const csvData: any[] = []
+
+    // Add OKRs
+    filteredOKRs.forEach((okr) => {
+      const progA = calculateOKRProgressForYear(
+        okr,
+        kpis,
+        parseInt(yearA),
+      ).progress
+      const progB = calculateOKRProgressForYear(
+        okr,
+        kpis,
+        parseInt(yearB),
+      ).progress
+      const delta = progB - progA
+
+      csvData.push({
+        Type: 'OKR',
+        Name: okr.title,
+        BU: okr.buId,
+        [`Value_${yearA}`]: `${progA}%`,
+        [`Value_${yearB}`]: `${progB}%`,
+        Variation_Abs: `${delta}%`,
+        Status: okr.status,
+      })
+    })
+
+    // Add KPIs
+    filteredKPIs.forEach((kpi) => {
+      const valA = getKPIValueForYear(kpi, parseInt(yearA))
+      const valB = getKPIValueForYear(kpi, parseInt(yearB))
+      const percentDelta = valA !== 0 ? ((valB - valA) / valA) * 100 : 0
+
+      csvData.push({
+        Type: 'KPI',
+        Name: kpi.name,
+        BU: kpi.buId,
+        [`Value_${yearA}`]: valA,
+        [`Value_${yearB}`]: valB,
+        Variation_Pct: `${percentDelta.toFixed(2)}%`,
+        Status: kpi.status,
+      })
+    })
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm')
+    downloadCSV(
+      csvData,
+      `comparativo_anual_${yearA}_vs_${yearB}_${timestamp}.csv`,
+    )
+  }
+
+  const handleExportPDF = () => {
+    window.print()
+  }
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in print:space-y-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -78,36 +146,57 @@ export const AnnualComparison = () => {
             Análise side-by-side de OKRs e KPIs entre períodos fiscais.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm">
-          <Select value={yearA} onValueChange={setYearA}>
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={`a-${y}`} value={y}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-muted-foreground text-sm">vs</span>
-          <Select value={yearB} onValueChange={setYearB}>
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={`b-${y}`} value={y}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2 no-print">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir / Salvar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCSV}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm ml-2">
+            <Select value={yearA} onValueChange={setYearA}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={`a-${y}`} value={y}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-muted-foreground text-sm">vs</span>
+            <Select value={yearB} onValueChange={setYearB}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={`b-${y}`} value={y}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <Card>
+      <Card className="avoid-break">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-[#003366]" />
@@ -149,7 +238,7 @@ export const AnnualComparison = () => {
                       {okr.scope === 'MULTI_YEAR' && (
                         <Badge
                           variant="secondary"
-                          className="mt-1 text-[10px] px-1 h-5"
+                          className="mt-1 text-[10px] px-1 h-5 print:border print:border-gray-200"
                         >
                           Plurianual
                         </Badge>
@@ -186,7 +275,7 @@ export const AnnualComparison = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="page-break avoid-break">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-[#003366]" />

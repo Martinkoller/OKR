@@ -1,5 +1,5 @@
-import { KPI, OKR, KPIStatus } from '@/types'
-import { isSameMonth, parseISO } from 'date-fns'
+import { KPI, OKR, KPIStatus, KPIHistoryEntry } from '@/types'
+import { isSameMonth, parseISO, addMonths, format } from 'date-fns'
 
 export const calculateStatus = (value: number, goal: number): KPIStatus => {
   if (goal === 0) return 'GREEN'
@@ -58,12 +58,11 @@ export const getKPIValueForYear = (kpi: KPI, year: number): number => {
   return getKPIValueForDate(kpi, endOfYear)
 }
 
-export const calculateOKRProgressForYear = (
+export const calculateOKRProgressForDate = (
   okr: OKR,
   kpis: KPI[],
-  year: number,
+  date: Date,
 ): { progress: number; status: KPIStatus } => {
-  // Logic similar to current progress, but using historical values
   const linkedKPIs = kpis.filter((k) => okr.kpiIds.includes(k.id))
   if (linkedKPIs.length === 0) return { progress: 0, status: 'RED' }
 
@@ -71,10 +70,7 @@ export const calculateOKRProgressForYear = (
   let weightedProgress = 0
 
   linkedKPIs.forEach((kpi) => {
-    // For historical progress, we assume goal is same (simplified)
-    // In real app, goals might change per year.
-    // Using current goal as reference.
-    const historicalValue = getKPIValueForYear(kpi, year)
+    const historicalValue = getKPIValueForDate(kpi, date)
     const kpiProgress = calculateKPIProgress(historicalValue, kpi.goal)
 
     totalWeight += kpi.weight
@@ -88,4 +84,102 @@ export const calculateOKRProgressForYear = (
   else if (finalProgress >= 90) status = 'YELLOW'
 
   return { progress: Math.round(finalProgress), status }
+}
+
+export const calculateOKRProgressForYear = (
+  okr: OKR,
+  kpis: KPI[],
+  year: number,
+): { progress: number; status: KPIStatus } => {
+  const endOfYear = new Date(year, 11, 31, 23, 59, 59)
+  return calculateOKRProgressForDate(okr, kpis, endOfYear)
+}
+
+// Prediction Logic (Linear Regression)
+export const predictTrend = (
+  history: KPIHistoryEntry[],
+  monthsToPredict: number = 3,
+): { date: string; value: number; isForecast: boolean }[] => {
+  if (history.length < 2) return []
+
+  // Sort history ascending for calculation
+  const sorted = [...history].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
+
+  // Prepare data points (X = timestamp, Y = value)
+  const points = sorted.map((h) => ({
+    x: new Date(h.date).getTime(),
+    y: h.value,
+  }))
+
+  const n = points.length
+  const sumX = points.reduce((acc, p) => acc + p.x, 0)
+  const sumY = points.reduce((acc, p) => acc + p.y, 0)
+  const sumXY = points.reduce((acc, p) => acc + p.x * p.y, 0)
+  const sumXX = points.reduce((acc, p) => acc + p.x * p.x, 0)
+
+  // Calculate slope (m) and intercept (b)
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+  const intercept = (sumY - slope * sumX) / n
+
+  // Generate future points
+  const lastDate = new Date(sorted[sorted.length - 1].date)
+  const forecast: { date: string; value: number; isForecast: boolean }[] = []
+
+  // Add the last actual point as the starting point of the forecast line
+  forecast.push({
+    date: sorted[sorted.length - 1].date,
+    value: sorted[sorted.length - 1].value,
+    isForecast: true,
+  })
+
+  for (let i = 1; i <= monthsToPredict; i++) {
+    const futureDate = addMonths(lastDate, i)
+    const futureX = futureDate.getTime()
+    const predictedY = slope * futureX + intercept
+
+    forecast.push({
+      date: futureDate.toISOString(),
+      value: Math.max(0, Math.round(predictedY)), // Prevent negative values
+      isForecast: true,
+    })
+  }
+
+  return forecast
+}
+
+// CSV Export Helper
+export const downloadCSV = (data: any[], filename: string) => {
+  if (!data.length) return
+
+  // Extract headers
+  const headers = Object.keys(data[0])
+
+  // Format rows
+  const csvContent = [
+    headers.join(','), // Header row
+    ...data.map((row) =>
+      headers
+        .map((fieldName) => {
+          const value = row[fieldName]
+          // Handle strings with commas
+          return typeof value === 'string' && value.includes(',')
+            ? `"${value}"`
+            : value
+        })
+        .join(','),
+    ),
+  ].join('\n')
+
+  // Create Blob and download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
