@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, History } from 'lucide-react'
+import { ArrowLeft, History, LineChart as LineChartIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { AuditLogTimeline } from '@/components/AuditLogTimeline'
@@ -26,6 +26,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ActionPlanList } from '@/components/ActionPlanList'
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
+import { format, parseISO } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -44,11 +60,26 @@ export const KPIDetail = () => {
     return <div className="p-8 text-center">KPI não encontrado.</div>
   }
 
+  // Chart Data Preparation
+  const chartData = kpi.history
+    .map((entry) => ({
+      date: format(parseISO(entry.date), 'dd/MM', { locale: ptBR }),
+      value: entry.value,
+    }))
+    .reverse() // Assuming history is newest first, we want oldest first for chart
+
+  // If history is empty, show current
+  if (chartData.length === 0) {
+    chartData.push({
+      date: format(new Date(), 'dd/MM'),
+      value: kpi.currentValue,
+    })
+  }
+
   const handleUpdate = () => {
     const val = parseFloat(newValue)
     if (isNaN(val)) return
 
-    // Calculate potential status
     const potentialPercentage = val / kpi.goal
     let potentialStatus = 'GREEN'
     if (potentialPercentage < 0.9) potentialStatus = 'RED'
@@ -60,34 +91,26 @@ export const KPIDetail = () => {
     ) {
       toast({
         title: 'Justificativa Necessária',
-        description:
-          'Para status de Atenção ou Crítico, é obrigatório informar uma justificativa.',
+        description: 'Obrigatório para status não-Verde.',
         variant: 'destructive',
       })
       return
     }
 
     if (!currentUser) return
-
     updateKPI(kpi.id, val, currentUser.id, justification)
 
-    // Simulate Notification logic
     if (potentialStatus === 'RED') {
       addNotification(
         'Alerta de KPI',
         `O KPI ${kpi.name} entrou em estado crítico.`,
       )
-      toast({
-        title: 'E-mail enviado',
-        description: 'Um alerta foi enviado para os gestores responsáveis.',
-      })
     }
 
     toast({
       title: 'KPI Atualizado',
-      description: 'O valor foi registrado com sucesso.',
+      description: 'Valor registrado com sucesso.',
     })
-
     setNewValue('')
     setJustification('')
     setIsDialogOpen(false)
@@ -95,16 +118,13 @@ export const KPIDetail = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" asChild className="pl-0">
-          <Link to="/kpis">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para KPIs
-          </Link>
-        </Button>
-      </div>
+      <Button variant="ghost" asChild className="pl-0">
+        <Link to="/kpis">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para KPIs
+        </Link>
+      </Button>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Section */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
@@ -126,31 +146,55 @@ export const KPIDetail = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-muted/20 rounded-lg border">
-                <div>
-                  <span className="text-sm text-muted-foreground block">
-                    Meta Estabelecida
-                  </span>
-                  <span className="text-2xl font-bold">
-                    {kpi.goal}{' '}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {kpi.unit}
-                    </span>
-                  </span>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground block">
-                    Valor Atual
-                  </span>
-                  <span className="text-2xl font-bold">
-                    {kpi.currentValue}{' '}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {kpi.unit}
-                    </span>
-                  </span>
-                </div>
+              <div className="h-[250px] w-full mb-6">
+                <ChartContainer
+                  config={{ value: { label: 'Valor', color: '#2563eb' } }}
+                >
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient
+                        id="fillValue"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="var(--color-value)"
+                          stopOpacity={0.8}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="var(--color-value)"
+                          stopOpacity={0.1}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      domain={['auto', 'auto']}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="natural"
+                      dataKey="value"
+                      stroke="var(--color-value)"
+                      fill="url(#fillValue)"
+                    />
+                  </AreaChart>
+                </ChartContainer>
               </div>
-
+              {/* Update Form */}
               <div className="space-y-4 pt-4 border-t">
                 <h3 className="font-medium">Atualizar Medição</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -189,7 +233,6 @@ export const KPIDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Action Plans Section */}
           <ActionPlanList entityId={kpi.id} entityType="KPI" />
 
           <Card>
@@ -205,7 +248,6 @@ export const KPIDetail = () => {
           </Card>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -213,20 +255,20 @@ export const KPIDetail = () => {
             </CardHeader>
             <CardContent className="text-sm space-y-3">
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{kpi.id}</span>
+                <span className="text-muted-foreground">Meta</span>
+                <span className="font-bold">
+                  {kpi.goal} {kpi.unit}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Atual</span>
+                <span className="font-bold">
+                  {kpi.currentValue} {kpi.unit}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Unidade</span>
                 <span className="font-medium uppercase">{kpi.unit}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Tipo</span>
-                <span className="font-medium uppercase">{kpi.type}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Frequência</span>
-                <span className="font-medium uppercase">{kpi.frequency}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Owner</span>
@@ -243,8 +285,7 @@ export const KPIDetail = () => {
             <DialogTitle>Confirmar Atualização</DialogTitle>
             <DialogDescription>
               Você está prestes a atualizar o KPI <strong>{kpi.name}</strong>{' '}
-              para o valor <strong>{newValue}</strong>. Esta ação será
-              registrada no log de auditoria permanentemente.
+              para o valor <strong>{newValue}</strong>.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
