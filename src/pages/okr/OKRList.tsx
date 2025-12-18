@@ -11,12 +11,14 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { OKR } from '@/types'
 import { usePermissions } from '@/hooks/usePermissions'
+import { OKRFormDialog } from '@/components/okr/OKRFormDialog'
 
 export const OKRList = () => {
   const { okrs } = useDataStore()
   const { selectedBUId } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const { canCreate } = usePermissions()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const filteredOKRs = okrs.filter((okr) => {
     const matchesBU = selectedBUId === 'GLOBAL' || okr.buId === selectedBUId
@@ -41,7 +43,7 @@ export const OKRList = () => {
           <p className="text-muted-foreground">Objetivos e Resultados Chave</p>
         </div>
         {canCreate('OKR') && (
-          <Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Novo OKR
           </Button>
         )}
@@ -120,6 +122,12 @@ export const OKRList = () => {
           </div>
         )}
       </div>
+
+      <OKRFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={() => {}}
+      />
     </div>
   )
 }

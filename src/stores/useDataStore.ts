@@ -33,6 +33,8 @@ interface DataState {
 
   saveActionPlan: (plan: ActionPlan, userId: string) => void
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
+  addOKR: (okr: OKR, userId: string) => void
+  addKPI: (kpi: KPI, userId: string) => void
 }
 
 export const useDataStore = create<DataState>((set) => ({
@@ -162,4 +164,42 @@ export const useDataStore = create<DataState>((set) => ({
         ...state.auditLogs,
       ],
     })),
+
+  addOKR: (okr, userId) => {
+    set((state) => {
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: okr.id,
+        entityType: 'OKR',
+        action: 'CREATE',
+        reason: `Criação de OKR: ${okr.title}`,
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+
+      return {
+        okrs: [...state.okrs, okr],
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  addKPI: (kpi, userId) => {
+    set((state) => {
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: kpi.id,
+        entityType: 'KPI',
+        action: 'CREATE',
+        reason: `Criação de KPI: ${kpi.name}`,
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+
+      return {
+        kpis: [...state.kpis, kpi],
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
 }))

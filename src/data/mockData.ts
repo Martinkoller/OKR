@@ -11,10 +11,17 @@ import {
 
 // Updated Hierarchical Structure
 export const MOCK_BUS: BU[] = [
-  { id: 'bu-5', name: 'Corporativo (Holding)', slug: 'corp', roleIds: [] },
+  {
+    id: 'bu-5',
+    name: 'Corporativo (Holding)',
+    description: 'Administração central e serviços compartilhados.',
+    slug: 'corp',
+    roleIds: [],
+  },
   {
     id: 'bu-1',
     name: 'Varejo',
+    description: 'Soluções para o varejo físico e digital.',
     slug: 'varejo',
     parentId: 'bu-5',
     roleIds: [],
@@ -22,14 +29,23 @@ export const MOCK_BUS: BU[] = [
   {
     id: 'bu-2',
     name: 'Recursos Humanos',
+    description: 'Gestão de talentos e cultura organizacional.',
     slug: 'rh',
     parentId: 'bu-5',
     roleIds: [],
   },
-  { id: 'bu-3', name: 'ERP', slug: 'erp', parentId: 'bu-5', roleIds: [] },
+  {
+    id: 'bu-3',
+    name: 'ERP',
+    description: 'Sistemas de gestão empresarial integrados.',
+    slug: 'erp',
+    parentId: 'bu-5',
+    roleIds: [],
+  },
   {
     id: 'bu-4',
     name: 'Fintech',
+    description: 'Serviços financeiros e meios de pagamento.',
     slug: 'fintech',
     parentId: 'bu-5',
     roleIds: [],
@@ -37,6 +53,7 @@ export const MOCK_BUS: BU[] = [
   {
     id: 'bu-6',
     name: 'Varejo Sul',
+    description: 'Operações de varejo na região Sul.',
     slug: 'varejo-sul',
     parentId: 'bu-1',
     roleIds: [],

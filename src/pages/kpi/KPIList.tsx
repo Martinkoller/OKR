@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { usePermissions } from '@/hooks/usePermissions'
+import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
 
 export const KPIList = () => {
   const { kpis } = useDataStore()
@@ -24,6 +25,7 @@ export const KPIList = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const isMobile = useIsMobile()
   const { canCreate } = usePermissions()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const filteredKPIs = kpis.filter((kpi) => {
     const matchesBU = selectedBUId === 'GLOBAL' || kpi.buId === selectedBUId
@@ -45,7 +47,7 @@ export const KPIList = () => {
             <Filter className="mr-2 h-4 w-4" /> Filtros
           </Button>
           {canCreate('KPI') && (
-            <Button>
+            <Button onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Novo KPI
             </Button>
           )}
@@ -156,6 +158,12 @@ export const KPIList = () => {
           )}
         </CardContent>
       </Card>
+
+      <KPIFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={() => {}}
+      />
     </div>
   )
 }

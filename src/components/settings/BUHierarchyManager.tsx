@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -46,12 +47,14 @@ export const BUHierarchyManager = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingBU, setEditingBU] = useState<BU | undefined>(undefined)
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [slug, setSlug] = useState('')
   const [parentId, setParentId] = useState<string>('none')
 
   const handleCreate = () => {
     setEditingBU(undefined)
     setName('')
+    setDescription('')
     setSlug('')
     setParentId('none')
     setIsDialogOpen(true)
@@ -60,6 +63,7 @@ export const BUHierarchyManager = () => {
   const handleEdit = (bu: BU) => {
     setEditingBU(bu)
     setName(bu.name)
+    setDescription(bu.description || '')
     setSlug(bu.slug)
     setParentId(bu.parentId || 'none')
     setIsDialogOpen(true)
@@ -105,6 +109,7 @@ export const BUHierarchyManager = () => {
     const buData: BU = {
       id: editingBU?.id || `bu-${Date.now()}`,
       name,
+      description,
       slug,
       parentId: parentId === 'none' ? null : parentId,
       roleIds: editingBU?.roleIds || [],
@@ -159,6 +164,14 @@ export const BUHierarchyManager = () => {
               )}
               <span className="font-medium">{bu.name}</span>
             </div>
+            {bu.description && (
+              <p
+                className="text-xs text-muted-foreground mt-1 truncate max-w-[300px]"
+                style={{ paddingLeft: `${depth * 24 + 20}px` }}
+              >
+                {bu.description}
+              </p>
+            )}
           </TableCell>
           <TableCell className="font-mono text-xs text-muted-foreground">
             {bu.slug.toUpperCase()}
@@ -245,6 +258,14 @@ export const BUHierarchyManager = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Varejo Sul"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descrição da unidade..."
               />
             </div>
             <div className="grid gap-2">

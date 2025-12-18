@@ -3,6 +3,7 @@ export type Role = string
 export type BU = {
   id: string
   name: string
+  description?: string
   slug: string
   parentId?: string | null // For hierarchy
   roleIds?: string[] // Roles inherited by members of this BU
