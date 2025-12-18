@@ -16,33 +16,63 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { format } from 'date-fns'
+import {
+  format,
+  parseISO,
+  isWithinInterval,
+  startOfDay,
+  endOfDay,
+} from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useState } from 'react'
 import { AuditAction, AuditEntity } from '@/types'
 import { Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 
 export const AuditLogTab = () => {
   const { auditLogs } = useDataStore()
-  const { users } = useUserStore()
+  const { users, bus } = useUserStore()
 
   const [filterUser, setFilterUser] = useState<string>('ALL')
   const [filterAction, setFilterAction] = useState<string>('ALL')
   const [filterEntity, setFilterEntity] = useState<string>('ALL')
+  const [filterBU, setFilterBU] = useState<string>('ALL')
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
 
   const filteredLogs = auditLogs.filter((log) => {
+    // Basic Filters
     if (filterUser !== 'ALL' && log.userId !== filterUser) return false
     if (filterAction !== 'ALL' && log.action !== filterAction) return false
     if (filterEntity !== 'ALL' && log.entityType !== filterEntity) return false
 
+    // Search Term
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
       const reasonMatch = log.reason?.toLowerCase().includes(searchLower)
       const detailsMatch = log.details?.toLowerCase().includes(searchLower)
       const fieldMatch = log.field?.toLowerCase().includes(searchLower)
-      return reasonMatch || detailsMatch || fieldMatch
+      if (!reasonMatch && !detailsMatch && !fieldMatch) return false
+    }
+
+    // Date Range
+    if (startDate || endDate) {
+      const logDate = parseISO(log.timestamp)
+      const start = startDate ? startOfDay(parseISO(startDate)) : new Date(0)
+      const end = endDate
+        ? endOfDay(parseISO(endDate))
+        : new Date(8640000000000000)
+
+      if (!isWithinInterval(logDate, { start, end })) return false
+    }
+
+    // BU Filter (Indirect via User)
+    if (filterBU !== 'ALL') {
+      const user = users.find((u) => u.id === log.userId)
+      // Check if user belongs to selected BU or if BU is ALL
+      if (!user || !user.buIds.includes(filterBU)) return false
     }
 
     return true
@@ -76,6 +106,12 @@ export const AuditLogTab = () => {
         return <Badge variant="destructive">Excluir</Badge>
       case 'EXPORT':
         return <Badge variant="secondary">Exportar</Badge>
+      case 'ACCESS':
+        return (
+          <Badge variant="outline" className="text-gray-500">
+            Acesso
+          </Badge>
+        )
       default:
         return <Badge variant="outline">{action}</Badge>
     }
@@ -83,8 +119,8 @@ export const AuditLogTab = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por descrição..."
@@ -93,8 +129,9 @@ export const AuditLogTab = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
         <Select value={filterUser} onValueChange={setFilterUser}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger>
             <SelectValue placeholder="Usuário" />
           </SelectTrigger>
           <SelectContent>
@@ -106,32 +143,59 @@ export const AuditLogTab = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterEntity} onValueChange={setFilterEntity}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Módulo" />
+
+        <Select value={filterBU} onValueChange={setFilterBU}>
+          <SelectTrigger>
+            <SelectValue placeholder="Unidade de Negócio" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Todos Módulos</SelectItem>
-            <SelectItem value="OKR">OKR</SelectItem>
-            <SelectItem value="KPI">KPI</SelectItem>
-            <SelectItem value="ACTION_PLAN">Plano de Ação</SelectItem>
-            <SelectItem value="USER">Usuário</SelectItem>
-            <SelectItem value="ROLE">Função</SelectItem>
-            <SelectItem value="REPORT">Relatório</SelectItem>
+            <SelectItem value="ALL">Todas Unidades</SelectItem>
+            {bus.map((b) => (
+              <SelectItem key={b.id} value={b.id}>
+                {b.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+
         <Select value={filterAction} onValueChange={setFilterAction}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Ação" />
+          <SelectTrigger>
+            <SelectValue placeholder="Tipo de Ação" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Todas Ações</SelectItem>
-            <SelectItem value="CREATE">Criar</SelectItem>
-            <SelectItem value="UPDATE">Editar</SelectItem>
-            <SelectItem value="DELETE">Excluir</SelectItem>
-            <SelectItem value="EXPORT">Exportar</SelectItem>
+            <SelectItem value="ACCESS">Acesso / Login</SelectItem>
+            <SelectItem value="CREATE">Criação</SelectItem>
+            <SelectItem value="UPDATE">Edição</SelectItem>
+            <SelectItem value="DELETE">Exclusão</SelectItem>
+            <SelectItem value="EXPORT">Exportação</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="flex items-center gap-2 col-span-1 md:col-span-2">
+          <div className="flex-1">
+            <Label className="text-xs text-muted-foreground mb-1 block">
+              De
+            </Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-9"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-xs text-muted-foreground mb-1 block">
+              Até
+            </Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-9"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -141,7 +205,7 @@ export const AuditLogTab = () => {
               <TableHead>Data/Hora</TableHead>
               <TableHead>Usuário</TableHead>
               <TableHead>Ação</TableHead>
-              <TableHead>Módulo</TableHead>
+              <TableHead>Entidade</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead>Detalhes</TableHead>
             </TableRow>
@@ -157,7 +221,7 @@ export const AuditLogTab = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLogs.map((log) => (
+              filteredLogs.slice(0, 100).map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(log.timestamp), 'dd/MM/yyyy HH:mm', {
@@ -172,17 +236,28 @@ export const AuditLogTab = () => {
                     {log.entityType}
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate text-sm">
-                    {log.reason || 'Ação registrada no sistema'}
+                    {log.reason || '-'}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {log.field ? `Campo: ${log.field}` : '-'}
-                    {log.oldValue && ` (${log.oldValue} → ${log.newValue})`}
+                  <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                    {log.details ? (
+                      log.details
+                    ) : (
+                      <>
+                        {log.field ? `Campo: ${log.field}` : ''}
+                        {log.oldValue && ` (${log.oldValue} → ${log.newValue})`}
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
+        {filteredLogs.length > 100 && (
+          <div className="p-2 text-center text-xs text-muted-foreground border-t">
+            Exibindo os 100 registros mais recentes de {filteredLogs.length}.
+          </div>
+        )}
       </div>
     </div>
   )

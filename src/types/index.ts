@@ -126,7 +126,9 @@ export type AuditEntity =
   | 'REPORT'
   | 'GROUP'
   | 'BU'
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
+  | 'SYSTEM'
+  | 'PAGE'
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'ACCESS'
 
 export type AuditEntry = {
   id: string

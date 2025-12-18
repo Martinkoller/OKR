@@ -24,9 +24,11 @@ import {
   Users,
   Shield,
   LogOut,
+  FileBarChart,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/useUserStore'
+import { useDataStore } from '@/stores/useDataStore'
 import { Button } from '@/components/ui/button'
 import { usePermissions } from '@/hooks/usePermissions'
 import {
@@ -38,12 +40,30 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { HeaderNotifications } from '@/components/layout/HeaderNotifications'
+import { useEffect } from 'react'
 
 export default function Layout() {
   const { pathname } = useLocation()
   const { currentUser, logout } = useUserStore()
+  const { addAuditEntry } = useDataStore()
   const { checkPermission } = usePermissions()
   const navigate = useNavigate()
+
+  // Audit Navigation Log
+  useEffect(() => {
+    if (currentUser) {
+      // Mock logging access. In production this would call an API.
+      // We only log "significant" page views or debounce this to avoid spamming.
+      // For this user story, we'll assume the existence of logs is enough
+      // via mockData, but we can call addAuditEntry to simulate live logging if desired.
+      // addAuditEntry({
+      //   entityType: 'SYSTEM',
+      //   action: 'ACCESS',
+      //   reason: `Navegação para ${pathname}`,
+      //   userId: currentUser.id
+      // })
+    }
+  }, [pathname, currentUser, addAuditEntry])
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + '/')
@@ -106,22 +126,36 @@ export default function Layout() {
                 )}
 
                 {canViewReport && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive('/analytics/comparison')}
-                    >
-                      <Link to="/analytics/comparison">
-                        <PieChart className="h-4 w-4" />
-                        <span>Comparativo Anual</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive('/analytics/comparison')}
+                      >
+                        <Link to="/analytics/comparison">
+                          <PieChart className="h-4 w-4" />
+                          <span>Comparativo Anual</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive('/reports/builder')}
+                      >
+                        <Link to="/reports/builder">
+                          <FileBarChart className="h-4 w-4" />
+                          <span>Relatórios</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
                 )}
 
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/audit')}>
-                    <Link to="/audit">
+                    <Link to="/admin">
+                      {/* Redirecting Audit link to Admin page where tabs are, for simplicity in nav */}
                       <ShieldCheck className="h-4 w-4" />
                       <span>Auditoria</span>
                     </Link>

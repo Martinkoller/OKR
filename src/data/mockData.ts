@@ -8,9 +8,40 @@ import {
   RoleDefinition,
   Group,
   Template,
+  KPIHistoryEntry,
 } from '@/types'
+import { subMonths, format } from 'date-fns'
 
-// Updated Hierarchical Structure
+// Helper to generate history
+const generateHistory = (
+  months: number,
+  baseValue: number,
+  trend: 'UP' | 'DOWN' | 'STABLE',
+  userId: string,
+): KPIHistoryEntry[] => {
+  const history: KPIHistoryEntry[] = []
+  const today = new Date()
+  let currentValue = baseValue
+
+  for (let i = months; i >= 0; i--) {
+    const date = subMonths(today, i)
+    // Add some randomness
+    const variance = Math.random() * (baseValue * 0.1)
+    if (trend === 'UP') currentValue += variance * 0.5
+    else if (trend === 'DOWN') currentValue -= variance * 0.5
+    else currentValue += variance * (Math.random() > 0.5 ? 1 : -1)
+
+    history.push({
+      date: date.toISOString(),
+      value: Math.max(0, Math.round(currentValue)),
+      updatedByUserId: userId,
+      timestamp: date.toISOString(),
+      comment: i === 0 ? 'Fechamento atual' : 'Fechamento mensal',
+    })
+  }
+  return history
+}
+
 export const MOCK_BUS: BU[] = [
   {
     id: 'bu-5',
@@ -149,7 +180,7 @@ export const MOCK_USERS: User[] = [
     name: 'Carlos CEO',
     email: 'carlos@zucchetti.com',
     role: 'DIRECTOR_GENERAL',
-    buIds: ['bu-5'], // Holding (implies access to all children)
+    buIds: ['bu-5'],
     groupIds: ['grp-2'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=99',
     active: true,
@@ -227,56 +258,7 @@ export const MOCK_KPIS: KPI[] = [
     currentValue: 1450000,
     status: 'YELLOW',
     lastUpdated: '2024-06-01T10:00:00Z',
-    history: [
-      {
-        date: '2023-12-01',
-        value: 1000000,
-        updatedByUserId: 'u-2',
-        timestamp: '2023-12-01T10:00:00Z',
-      },
-      {
-        date: '2023-06-01',
-        value: 900000,
-        updatedByUserId: 'u-2',
-        timestamp: '2023-06-01T10:00:00Z',
-      },
-      {
-        date: '2024-01-01',
-        value: 1200000,
-        updatedByUserId: 'u-2',
-        timestamp: '2024-01-01T10:00:00Z',
-      },
-      {
-        date: '2024-02-01',
-        value: 1250000,
-        updatedByUserId: 'u-2',
-        timestamp: '2024-02-01T10:00:00Z',
-      },
-      {
-        date: '2024-03-01',
-        value: 1300000,
-        updatedByUserId: 'u-2',
-        timestamp: '2024-03-01T10:00:00Z',
-      },
-      {
-        date: '2024-04-01',
-        value: 1350000,
-        updatedByUserId: 'u-2',
-        timestamp: '2024-04-01T10:00:00Z',
-      },
-      {
-        date: '2024-05-01',
-        value: 1400000,
-        updatedByUserId: 'u-2',
-        timestamp: '2024-05-01T10:00:00Z',
-      },
-      {
-        date: '2024-06-01',
-        value: 1450000,
-        updatedByUserId: 'u-2',
-        timestamp: '2024-06-01T10:00:00Z',
-      },
-    ],
+    history: generateHistory(24, 1200000, 'UP', 'u-2'),
   },
   {
     id: 'kpi-2',
@@ -292,32 +274,7 @@ export const MOCK_KPIS: KPI[] = [
     currentValue: 65,
     status: 'GREEN',
     lastUpdated: '2024-06-01T10:00:00Z',
-    history: [
-      {
-        date: '2023-12-01',
-        value: 50,
-        updatedByUserId: 'u-3',
-        timestamp: '2023-12-01T10:00:00Z',
-      },
-      {
-        date: '2024-04-01',
-        value: 55,
-        updatedByUserId: 'u-3',
-        timestamp: '2024-04-01T10:00:00Z',
-      },
-      {
-        date: '2024-05-01',
-        value: 60,
-        updatedByUserId: 'u-3',
-        timestamp: '2024-05-01T10:00:00Z',
-      },
-      {
-        date: '2024-06-01',
-        value: 65,
-        updatedByUserId: 'u-3',
-        timestamp: '2024-06-01T10:00:00Z',
-      },
-    ],
+    history: generateHistory(24, 50, 'UP', 'u-3'),
   },
   {
     id: 'kpi-3',
@@ -333,32 +290,7 @@ export const MOCK_KPIS: KPI[] = [
     currentValue: 45,
     status: 'RED',
     lastUpdated: '2024-06-15T10:00:00Z',
-    history: [
-      {
-        date: '2023-12-01',
-        value: 28,
-        updatedByUserId: 'u-3',
-        timestamp: '2023-12-01T10:00:00Z',
-      },
-      {
-        date: '2024-01-01',
-        value: 32,
-        updatedByUserId: 'u-3',
-        timestamp: '2024-01-01T10:00:00Z',
-      },
-      {
-        date: '2024-03-01',
-        value: 35,
-        updatedByUserId: 'u-3',
-        timestamp: '2024-03-01T10:00:00Z',
-      },
-      {
-        date: '2024-06-01',
-        value: 45,
-        updatedByUserId: 'u-3',
-        timestamp: '2024-06-01T10:00:00Z',
-      },
-    ],
+    history: generateHistory(24, 30, 'DOWN', 'u-3'),
   },
 ]
 
@@ -463,6 +395,15 @@ export const MOCK_AUDIT_LOGS: AuditEntry[] = [
     userId: 'u-2',
     timestamp: '2024-06-01T10:00:00Z',
   },
+  {
+    id: 'log-3',
+    entityType: 'SYSTEM',
+    action: 'ACCESS',
+    reason: 'Login realizado com sucesso',
+    userId: 'u-1',
+    timestamp: new Date().toISOString(),
+    details: 'IP: 192.168.1.1',
+  },
 ]
 
 export const MOCK_TEMPLATES: Template[] = [
@@ -514,5 +455,39 @@ export const MOCK_TEMPLATES: Template[] = [
     unit: 'pts',
     suggestedGoal: 75,
     suggestedMetrics: ['Pesquisa trimestral', 'Tratar detratores'],
+  },
+  // Expanded Models
+  {
+    id: 'tpl-5',
+    type: 'KPI',
+    title: 'Churn Rate (Taxa de Cancelamento)',
+    description: 'Percentual de clientes que cancelaram o serviço.',
+    frequency: 'MONTHLY',
+    kpiType: 'QUANT',
+    unit: '%',
+    suggestedGoal: 1.0,
+    suggestedMetrics: ['Cálculo: (Cancelamentos / Base Ativa) * 100'],
+  },
+  {
+    id: 'tpl-6',
+    type: 'KPI',
+    title: 'EBITDA (Margem Operacional)',
+    description: 'Lucros antes de juros, impostos, depreciação e amortização.',
+    frequency: 'MONTHLY',
+    kpiType: 'QUANT',
+    unit: 'R$',
+    suggestedGoal: 500000,
+    suggestedMetrics: ['Acompanhamento financeiro rigoroso'],
+  },
+  {
+    id: 'tpl-7',
+    type: 'KPI',
+    title: 'CAC (Custo de Aquisição de Cliente)',
+    description: 'Custo médio para conquistar um novo cliente.',
+    frequency: 'MONTHLY',
+    kpiType: 'QUANT',
+    unit: 'R$',
+    suggestedGoal: 500,
+    suggestedMetrics: ['Incluir custos de marketing e vendas'],
   },
 ]

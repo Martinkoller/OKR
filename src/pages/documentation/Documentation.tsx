@@ -13,11 +13,18 @@ import {
 } from '@/components/ui/accordion'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { Calculator, ShieldCheck, Users, Workflow } from 'lucide-react'
+import {
+  Calculator,
+  ShieldCheck,
+  Users,
+  Workflow,
+  FileBarChart,
+  History,
+} from 'lucide-react'
 
 export default function Documentation() {
   return (
-    <div className="space-y-8 animate-fade-in max-w-5xl mx-auto">
+    <div className="space-y-8 animate-fade-in max-w-5xl mx-auto pb-10">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">
           Documentação do Sistema
@@ -29,6 +36,77 @@ export default function Documentation() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 text-[#003366]">
+              <FileBarChart className="h-6 w-6" />
+              <CardTitle>Construtor de Relatórios</CardTitle>
+            </div>
+            <CardDescription>
+              Guia de uso para geração de relatórios personalizados.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm text-gray-600">
+            <p>
+              O novo módulo de relatórios permite criar visões customizadas
+              combinando múltiplas BUs e métricas.
+            </p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li>
+                <strong>Filtros de Contexto:</strong> Selecione a unidade de
+                negócio desejada ou "Visão Global" para dados consolidados.
+              </li>
+              <li>
+                <strong>Seleção de Métricas:</strong> Marque manualmente quais
+                OKRs e KPIs deseja incluir no documento final.
+              </li>
+              <li>
+                <strong>Exportação:</strong> Use o botão "Exportar" para gerar
+                um arquivo <strong>PDF</strong> (ideal para apresentações) ou{' '}
+                <strong>CSV</strong> (para análise de dados crua).
+              </li>
+            </ol>
+            <div className="bg-muted p-3 rounded text-xs mt-2">
+              Dica: O preview do relatório é atualizado em tempo real conforme
+              você seleciona as métricas.
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 text-[#003366]">
+              <History className="h-6 w-6" />
+              <CardTitle>Sistema de Auditoria</CardTitle>
+            </div>
+            <CardDescription>
+              Rastreabilidade completa de ações e acessos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm text-gray-600">
+            <p>
+              Todas as operações críticas são registradas para garantir a
+              integridade dos dados.
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>
+                <strong>Registro de Acesso:</strong> Logins e acessos ao sistema
+                são monitorados com timestamp.
+              </li>
+              <li>
+                <strong>Modificações de Dados:</strong> Alterações em valores de
+                KPIs, Metas ou Status de Planos geram logs com "Valor Anterior"
+                e "Novo Valor".
+              </li>
+              <li>
+                <strong>Filtros Avançados:</strong> Administradores podem
+                filtrar logs por Usuário, Unidade de Negócio (BU), Tipo de Ação
+                e Intervalo de Datas.
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2 text-[#003366]">

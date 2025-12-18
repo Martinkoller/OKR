@@ -16,6 +16,7 @@ import { OKRDetail } from './pages/okr/OKRDetail'
 import { KPIList } from './pages/kpi/KPIList'
 import { KPIDetail } from './pages/kpi/KPIDetail'
 import { AnnualComparison } from './pages/analytics/AnnualComparison'
+import CustomReportBuilder from './pages/reports/CustomReportBuilder'
 import { Admin } from './pages/admin/Admin'
 import Documentation from './pages/documentation/Documentation'
 import NotificationSettings from './pages/settings/NotificationSettings'
@@ -50,14 +51,8 @@ const App = () => (
               path="/analytics/comparison"
               element={<AnnualComparison />}
             />
-            <Route
-              path="/audit"
-              element={
-                <div className="p-8">
-                  Página de Auditoria Completa (Em Desenvolvimento)
-                </div>
-              }
-            />
+            <Route path="/reports/builder" element={<CustomReportBuilder />} />
+            <Route path="/audit" element={<Admin />} />
             <Route path="/documentation" element={<Documentation />} />
             <Route
               path="/settings/notifications"
