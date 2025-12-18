@@ -1,16 +1,11 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Building, Settings2, ExternalLink } from 'lucide-react'
+import { Building, Settings2, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { BUHierarchyManager } from '@/components/settings/BUHierarchyManager'
 
 export const Admin = () => {
   return (
@@ -33,32 +28,7 @@ export const Admin = () => {
         </TabsList>
 
         <TabsContent value="bus">
-          <Card>
-            <CardHeader>
-              <CardTitle>Estrutura Organizacional</CardTitle>
-              <CardDescription>
-                Defina as Unidades de Negócio (BUs).
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {['Varejo', 'RH', 'ERP', 'Logística'].map((bu) => (
-                  <div
-                    key={bu}
-                    className="p-4 border rounded-lg flex justify-between items-center"
-                  >
-                    <span className="font-medium">{bu}</span>
-                    <Button variant="ghost" size="sm">
-                      Editar
-                    </Button>
-                  </div>
-                ))}
-                <Button variant="outline" className="border-dashed h-full">
-                  <Plus className="mr-2 h-4 w-4" /> Adicionar BU
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <BUHierarchyManager />
         </TabsContent>
 
         <TabsContent value="system">

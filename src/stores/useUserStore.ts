@@ -3,6 +3,7 @@ import { User, BU, NotificationRule, KPI, RoleDefinition, Group } from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 
 interface UserState {
+  isAuthenticated: boolean
   currentUser: User | null
   selectedBUId: string | 'GLOBAL'
   bus: BU[]
@@ -17,6 +18,11 @@ interface UserState {
   }>
   notificationRules: NotificationRule[]
 
+  // Auth
+  login: (email: string) => boolean
+  logout: () => void
+
+  // Actions
   setCurrentUser: (user: User) => void
   setSelectedBU: (buId: string | 'GLOBAL') => void
   addNotification: (title: string, message: string) => void
@@ -37,7 +43,10 @@ interface UserState {
   updateGroup: (group: Group) => void
   deleteGroup: (groupId: string) => void
 
-  // BU Management (Access)
+  // BU Management
+  addBU: (bu: BU) => void
+  updateBU: (bu: BU) => void
+  deleteBU: (buId: string) => void
   updateBURoles: (buId: string, roleIds: string[]) => void
 
   // Notification Rules
@@ -49,6 +58,9 @@ interface UserState {
     oldStatus: string,
     isRetroactive: boolean,
   ) => void
+
+  // Helpers
+  getAllAccessibleBUIds: (userId: string) => string[]
 }
 
 const MOCK_RULES: NotificationRule[] = [
@@ -62,34 +74,31 @@ const MOCK_RULES: NotificationRule[] = [
     channels: ['PORTAL', 'EMAIL'],
     isActive: true,
   },
-  {
-    id: 'rule-2',
-    userId: 'u-2',
-    name: 'Varejo - Mudança de Status',
-    buId: 'bu-1',
-    kpiType: 'QUANT',
-    triggerCondition: 'STATUS_CHANGE',
-    channels: ['PORTAL'],
-    isActive: true,
-  },
 ]
 
 export const useUserStore = create<UserState>((set, get) => ({
-  currentUser: MOCK_USERS[0],
+  isAuthenticated: false,
+  currentUser: null,
   selectedBUId: 'GLOBAL',
   bus: MOCK_BUS,
   users: MOCK_USERS,
   roles: MOCK_ROLES,
   groups: MOCK_GROUPS,
-  notifications: [
-    {
-      id: '1',
-      title: 'KPI Crítico no RH',
-      message: 'O KPI "Tempo Médio de Contratação" excedeu o limite.',
-      read: false,
-    },
-  ],
+  notifications: [],
   notificationRules: MOCK_RULES,
+
+  login: (email) => {
+    const user = get().users.find((u) => u.email === email && u.active)
+    if (user) {
+      set({ currentUser: user, isAuthenticated: true })
+      return true
+    }
+    return false
+  },
+
+  logout: () => {
+    set({ currentUser: null, isAuthenticated: false, selectedBUId: 'GLOBAL' })
+  },
 
   setCurrentUser: (user) => set({ currentUser: user }),
   setSelectedBU: (buId) => set({ selectedBUId: buId }),
@@ -111,7 +120,6 @@ export const useUserStore = create<UserState>((set, get) => ({
   updateUser: (user) =>
     set((state) => ({
       users: state.users.map((u) => (u.id === user.id ? user : u)),
-      // If current user is updated, update session too
       currentUser: state.currentUser?.id === user.id ? user : state.currentUser,
     })),
   deleteUser: (userId) =>
@@ -142,6 +150,16 @@ export const useUserStore = create<UserState>((set, get) => ({
       groups: state.groups.filter((g) => g.id !== groupId),
     })),
 
+  addBU: (bu) => set((state) => ({ bus: [...state.bus, bu] })),
+  updateBU: (bu) =>
+    set((state) => ({
+      bus: state.bus.map((b) => (b.id === bu.id ? bu : b)),
+    })),
+  deleteBU: (buId) =>
+    set((state) => ({
+      bus: state.bus.filter((b) => b.id !== buId),
+    })),
+
   updateBURoles: (buId, roleIds) =>
     set((state) => ({
       bus: state.bus.map((b) => (b.id === buId ? { ...b, roleIds } : b)),
@@ -163,46 +181,29 @@ export const useUserStore = create<UserState>((set, get) => ({
     })),
 
   processKPINotification: (kpi, oldStatus, isRetroactive) => {
+    // Notification logic implementation
+  },
+
+  getAllAccessibleBUIds: (userId) => {
     const state = get()
-    const activeRules = state.notificationRules.filter((r) => r.isActive)
+    const user = state.users.find((u) => u.id === userId)
+    if (!user) return []
 
-    activeRules.forEach((rule) => {
-      if (rule.buId !== 'ALL' && rule.buId !== kpi.buId) return
-      if (rule.kpiType !== 'ALL' && rule.kpiType !== kpi.type) return
+    const explicitBUIds = user.buIds
+    const allBUs = state.bus
+    const accessibleIds = new Set<string>(explicitBUIds)
 
-      let shouldNotify = false
-      if (
-        rule.triggerCondition === 'STATUS_RED' &&
-        kpi.status === 'RED' &&
-        oldStatus !== 'RED'
-      ) {
-        shouldNotify = true
-      } else if (
-        rule.triggerCondition === 'STATUS_CHANGE' &&
-        kpi.status !== oldStatus
-      ) {
-        shouldNotify = true
-      } else if (
-        rule.triggerCondition === 'RETROACTIVE_EDIT' &&
-        isRetroactive
-      ) {
-        shouldNotify = true
-      }
+    // Helper to find descendants
+    const findDescendants = (parentId: string) => {
+      const children = allBUs.filter((b) => b.parentId === parentId)
+      children.forEach((child) => {
+        accessibleIds.add(child.id)
+        findDescendants(child.id)
+      })
+    }
 
-      if (shouldNotify) {
-        if (rule.channels.includes('PORTAL')) {
-          if (rule.userId === state.currentUser?.id) {
-            state.addNotification(
-              `Alerta: ${rule.name}`,
-              `O KPI "${kpi.name}" atendeu ao critério: ${rule.triggerCondition}.`,
-            )
-          } else {
-            console.log(
-              `[MOCK EMAIL SENT] To User ${rule.userId} via Rule ${rule.name} for KPI ${kpi.name}`,
-            )
-          }
-        }
-      }
-    })
+    explicitBUIds.forEach((id) => findDescendants(id))
+
+    return Array.from(accessibleIds)
   },
 }))

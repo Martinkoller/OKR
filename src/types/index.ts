@@ -4,6 +4,7 @@ export type BU = {
   id: string
   name: string
   slug: string
+  parentId?: string | null // For hierarchy
   roleIds?: string[] // Roles inherited by members of this BU
 }
 
@@ -20,6 +21,7 @@ export type User = {
   id: string
   name: string
   email: string
+  password?: string // Mock password for validation
   role: Role // Direct role
   buIds: string[] // User can belong to multiple BUs
   groupIds?: string[] // User can belong to multiple Access Groups

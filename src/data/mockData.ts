@@ -9,12 +9,38 @@ import {
   Group,
 } from '@/types'
 
+// Updated Hierarchical Structure
 export const MOCK_BUS: BU[] = [
-  { id: 'bu-1', name: 'Varejo', slug: 'varejo', roleIds: [] },
-  { id: 'bu-2', name: 'Recursos Humanos', slug: 'rh', roleIds: [] },
-  { id: 'bu-3', name: 'ERP', slug: 'erp', roleIds: [] },
-  { id: 'bu-4', name: 'Fintech', slug: 'fintech', roleIds: [] },
-  { id: 'bu-5', name: 'Corporativo', slug: 'corp', roleIds: [] },
+  { id: 'bu-5', name: 'Corporativo (Holding)', slug: 'corp', roleIds: [] },
+  {
+    id: 'bu-1',
+    name: 'Varejo',
+    slug: 'varejo',
+    parentId: 'bu-5',
+    roleIds: [],
+  },
+  {
+    id: 'bu-2',
+    name: 'Recursos Humanos',
+    slug: 'rh',
+    parentId: 'bu-5',
+    roleIds: [],
+  },
+  { id: 'bu-3', name: 'ERP', slug: 'erp', parentId: 'bu-5', roleIds: [] },
+  {
+    id: 'bu-4',
+    name: 'Fintech',
+    slug: 'fintech',
+    parentId: 'bu-5',
+    roleIds: [],
+  },
+  {
+    id: 'bu-6',
+    name: 'Varejo Sul',
+    slug: 'varejo-sul',
+    parentId: 'bu-1',
+    roleIds: [],
+  },
 ]
 
 export const MOCK_ROLES: RoleDefinition[] = [
@@ -105,10 +131,11 @@ export const MOCK_USERS: User[] = [
     name: 'Carlos CEO',
     email: 'carlos@zucchetti.com',
     role: 'DIRECTOR_GENERAL',
-    buIds: ['bu-1', 'bu-2', 'bu-3', 'bu-4', 'bu-5'],
+    buIds: ['bu-5'], // Holding (implies access to all children)
     groupIds: ['grp-2'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=99',
     active: true,
+    password: '123',
   },
   {
     id: 'u-2',
@@ -119,6 +146,7 @@ export const MOCK_USERS: User[] = [
     groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=female&seed=12',
     active: true,
+    password: '123',
   },
   {
     id: 'u-3',
@@ -129,6 +157,7 @@ export const MOCK_USERS: User[] = [
     groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=45',
     active: true,
+    password: '123',
   },
   {
     id: 'u-4',
@@ -139,6 +168,7 @@ export const MOCK_USERS: User[] = [
     groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=33',
     active: true,
+    password: '123',
   },
   {
     id: 'u-5',
@@ -149,6 +179,7 @@ export const MOCK_USERS: User[] = [
     groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=female&seed=21',
     active: false,
+    password: '123',
   },
   {
     id: 'u-6',
@@ -159,6 +190,7 @@ export const MOCK_USERS: User[] = [
     groupIds: ['grp-1'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=10',
     active: true,
+    password: '123',
   },
 ]
 

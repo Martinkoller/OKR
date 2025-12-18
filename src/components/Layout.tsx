@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   SidebarProvider,
   Sidebar,
@@ -23,16 +23,26 @@ import {
   UserCircle,
   Users,
   Shield,
+  LogOut,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/useUserStore'
 import { Button } from '@/components/ui/button'
 import { usePermissions } from '@/hooks/usePermissions'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export default function Layout() {
   const { pathname } = useLocation()
-  const { currentUser } = useUserStore()
+  const { currentUser, logout } = useUserStore()
   const { checkPermission } = usePermissions()
+  const navigate = useNavigate()
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + '/')
@@ -41,6 +51,11 @@ export default function Layout() {
   const canViewOKR = checkPermission('OKR', 'VIEW')
   const canViewKPI = checkPermission('KPI', 'VIEW')
   const canViewReport = checkPermission('REPORT', 'VIEW')
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <SidebarProvider>
@@ -187,9 +202,20 @@ export default function Layout() {
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background print:hidden">
             <SidebarTrigger className="-ml-1" />
             <div className="ml-auto flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="relative">
-                <UserCircle className="h-5 w-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <UserCircle className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" /> Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
           <main className="flex-1 p-4 md:p-8 pt-6">
