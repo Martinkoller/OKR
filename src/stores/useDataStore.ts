@@ -34,6 +34,8 @@ interface DataState {
     reason?: string,
   ) => void
 
+  updateOKR: (okr: OKR, userId: string) => void
+
   saveActionPlan: (plan: ActionPlan, userId: string) => void
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
   addOKR: (okr: OKR, userId: string) => void
@@ -105,6 +107,25 @@ export const useDataStore = create<DataState>((set) => ({
 
       return {
         kpis: newKPIs,
+        okrs: newOKRs,
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  updateOKR: (okr, userId) => {
+    set((state) => {
+      const newOKRs = state.okrs.map((o) => (o.id === okr.id ? okr : o))
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: okr.id,
+        entityType: 'OKR',
+        action: 'UPDATE',
+        reason: `Atualização de OKR: ${okr.title}`,
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+      return {
         okrs: newOKRs,
         auditLogs: [auditEntry, ...state.auditLogs],
       }

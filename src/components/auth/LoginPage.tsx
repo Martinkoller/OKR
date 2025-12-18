@@ -53,9 +53,7 @@ export default function LoginPage() {
           <CardTitle className="text-2xl font-bold text-[#003366]">
             StratManager
           </CardTitle>
-          <CardDescription>
-            Portal de Gestão Estratégica Zucchetti
-          </CardDescription>
+          <CardDescription>by MarteckConsultoria</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

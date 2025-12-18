@@ -7,6 +7,7 @@ import {
   RoleDefinition,
   Group,
   Alert,
+  DashboardConfig,
 } from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 
@@ -28,6 +29,8 @@ interface UserState {
   // New alerts system
   alerts: Alert[]
   notificationRules: NotificationRule[]
+  // Dashboard Config per BU
+  dashboardConfigs: Record<string, DashboardConfig>
 
   // Auth
   login: (email: string) => boolean
@@ -37,6 +40,7 @@ interface UserState {
   setCurrentUser: (user: User) => void
   // Updated selector action
   setSelectedBUs: (buIds: string[]) => void
+  setDashboardConfig: (buId: string, config: DashboardConfig) => void
   addNotification: (title: string, message: string) => void
   markNotificationAsRead: (id: string) => void
   markAlertAsRead: (id: string) => void
@@ -102,6 +106,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   notifications: [],
   alerts: [],
   notificationRules: MOCK_RULES,
+  dashboardConfigs: {},
 
   login: (email) => {
     const user = get().users.find((u) => u.email === email && u.active)
@@ -127,11 +132,6 @@ export const useUserStore = create<UserState>((set, get) => ({
     const { currentUser, getAllAccessibleBUIds, triggerSecurityAlert } = get()
     if (!currentUser) return
 
-    // If GLOBAL is selected, check if user is admin or has global access?
-    // In this mock, we assume 'GLOBAL' view is allowed if user has access to at least one BU,
-    // but the data filtering will handle what they actually see.
-    // However, if they try to select a specific BU ID they don't have...
-
     if (buIds.includes('GLOBAL')) {
       set({ selectedBUIds: ['GLOBAL'] })
       return
@@ -154,6 +154,15 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
 
     set({ selectedBUIds: buIds })
+  },
+
+  setDashboardConfig: (buId, config) => {
+    set((state) => ({
+      dashboardConfigs: {
+        ...state.dashboardConfigs,
+        [buId]: config,
+      },
+    }))
   },
 
   addNotification: (title, message) =>
@@ -313,10 +322,6 @@ export const useUserStore = create<UserState>((set, get) => ({
     const state = get()
     const user = state.users.find((u) => u.id === userId)
     if (!user) return []
-
-    // If admin, give all? MOCK_ROLES says DIRECTOR_GENERAL has access to all configs,
-    // but data access might still be BU scoped or he has 'bu-5' (holding) which gives all.
-    // For simplicity, we rely on BU hierarchy traversal.
 
     const explicitBUIds = user.buIds
     const allBUs = state.bus

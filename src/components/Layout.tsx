@@ -25,6 +25,7 @@ import {
   Shield,
   LogOut,
   FileBarChart,
+  Database,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/useUserStore'
@@ -49,19 +50,9 @@ export default function Layout() {
   const { checkPermission } = usePermissions()
   const navigate = useNavigate()
 
-  // Audit Navigation Log
   useEffect(() => {
     if (currentUser) {
-      // Mock logging access. In production this would call an API.
-      // We only log "significant" page views or debounce this to avoid spamming.
-      // For this user story, we'll assume the existence of logs is enough
-      // via mockData, but we can call addAuditEntry to simulate live logging if desired.
-      // addAuditEntry({
-      //   entityType: 'SYSTEM',
-      //   action: 'ACCESS',
-      //   reason: `Navegação para ${pathname}`,
-      //   userId: currentUser.id
-      // })
+      // Access log
     }
   }, [pathname, currentUser, addAuditEntry])
 
@@ -86,10 +77,15 @@ export default function Layout() {
             <SidebarHeader className="border-b px-6 py-4">
               <Link
                 to="/"
-                className="flex items-center gap-2 font-bold text-xl text-primary"
+                className="flex flex-col gap-0 font-bold text-xl text-primary"
               >
-                <Target className="h-6 w-6" />
-                <span>StratManager</span>
+                <div className="flex items-center gap-2">
+                  <Target className="h-6 w-6" />
+                  <span>StratManager</span>
+                </div>
+                <span className="text-[10px] font-normal text-muted-foreground ml-8">
+                  by MarteckConsultoria
+                </span>
               </Link>
             </SidebarHeader>
             <SidebarContent className="px-4 py-4">
@@ -153,9 +149,20 @@ export default function Layout() {
                 )}
 
                 <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/integrations')}
+                  >
+                    <Link to="/integrations">
+                      <Database className="h-4 w-4" />
+                      <span>Integração BI</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/audit')}>
                     <Link to="/admin">
-                      {/* Redirecting Audit link to Admin page where tabs are, for simplicity in nav */}
                       <ShieldCheck className="h-4 w-4" />
                       <span>Auditoria</span>
                     </Link>

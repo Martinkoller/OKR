@@ -194,6 +194,11 @@ export interface Alert {
   link?: string // Optional link to entity
 }
 
+export interface DashboardConfig {
+  pinnedOKRIds: string[]
+  pinnedKPIIds: string[]
+}
+
 export const KPI_STATUS_COLORS = {
   GREEN: 'bg-emerald-500',
   YELLOW: 'bg-amber-500',
