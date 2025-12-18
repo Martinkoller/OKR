@@ -16,12 +16,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export const KPIList = () => {
   const { kpis } = useDataStore()
   const { selectedBUId } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const isMobile = useIsMobile()
+  const { canCreate } = usePermissions()
 
   const filteredKPIs = kpis.filter((kpi) => {
     const matchesBU = selectedBUId === 'GLOBAL' || kpi.buId === selectedBUId
@@ -42,9 +44,11 @@ export const KPIList = () => {
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" /> Filtros
           </Button>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Novo KPI
-          </Button>
+          {canCreate('KPI') && (
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Novo KPI
+            </Button>
+          )}
         </div>
       </div>
 

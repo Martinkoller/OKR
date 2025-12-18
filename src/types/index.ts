@@ -1,4 +1,4 @@
-export type Role = 'DIRECTOR_GENERAL' | 'DIRECTOR_BU' | 'GPM' | 'PM' | 'VIEWER'
+export type Role = string
 
 export type BU = {
   id: string
@@ -14,6 +14,17 @@ export type User = {
   buIds: string[] // User can belong to multiple BUs
   avatarUrl?: string
   active: boolean
+}
+
+export type PermissionModule = 'OKR' | 'KPI' | 'REPORT' | 'SETTINGS'
+export type PermissionAction = 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'EXPORT'
+
+export type RoleDefinition = {
+  id: string
+  name: string
+  description: string
+  permissions: Record<PermissionModule, PermissionAction[]>
+  isSystem: boolean
 }
 
 export type KPIFrequency = 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SEMESTERLY'
@@ -92,17 +103,27 @@ export type ActionPlan = {
   updatedAt: string
 }
 
+export type AuditEntity =
+  | 'KPI'
+  | 'OKR'
+  | 'ACTION_PLAN'
+  | 'ROLE'
+  | 'USER'
+  | 'REPORT'
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
+
 export type AuditEntry = {
   id: string
-  entityId: string
-  entityType: 'KPI' | 'OKR' | 'ACTION_PLAN'
-  action: 'CREATE' | 'UPDATE' | 'DELETE'
+  entityId?: string
+  entityType: AuditEntity
+  action: AuditAction
   field?: string
   oldValue?: string | number
   newValue?: string | number
   reason?: string
   userId: string
   timestamp: string
+  details?: string
 }
 
 export type TriggerCondition =

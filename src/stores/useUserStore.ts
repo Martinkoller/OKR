@@ -1,12 +1,13 @@
 import { create } from 'zustand'
-import { User, BU, NotificationRule, KPI } from '@/types'
-import { MOCK_BUS, MOCK_USERS } from '@/data/mockData'
+import { User, BU, NotificationRule, KPI, RoleDefinition } from '@/types'
+import { MOCK_BUS, MOCK_USERS, MOCK_ROLES } from '@/data/mockData'
 
 interface UserState {
   currentUser: User | null
   selectedBUId: string | 'GLOBAL'
   bus: BU[]
   users: User[]
+  roles: RoleDefinition[]
   notifications: Array<{
     id: string
     title: string
@@ -24,6 +25,11 @@ interface UserState {
   addUser: (user: User) => void
   updateUser: (user: User) => void
   deleteUser: (userId: string) => void
+
+  // Role Management
+  addRole: (role: RoleDefinition) => void
+  updateRole: (role: RoleDefinition) => void
+  deleteRole: (roleId: string) => void
 
   // Notification Rules
   addRule: (rule: NotificationRule) => void
@@ -64,6 +70,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   selectedBUId: 'GLOBAL',
   bus: MOCK_BUS,
   users: MOCK_USERS,
+  roles: MOCK_ROLES,
   notifications: [
     {
       id: '1',
@@ -98,6 +105,16 @@ export const useUserStore = create<UserState>((set, get) => ({
   deleteUser: (userId) =>
     set((state) => ({
       users: state.users.filter((u) => u.id !== userId),
+    })),
+
+  addRole: (role) => set((state) => ({ roles: [...state.roles, role] })),
+  updateRole: (role) =>
+    set((state) => ({
+      roles: state.roles.map((r) => (r.id === role.id ? role : r)),
+    })),
+  deleteRole: (roleId) =>
+    set((state) => ({
+      roles: state.roles.filter((r) => r.id !== roleId),
     })),
 
   addRule: (rule) =>

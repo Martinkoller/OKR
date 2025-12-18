@@ -1,4 +1,12 @@
-import { BU, User, KPI, OKR, ActionPlan, AuditEntry } from '@/types'
+import {
+  BU,
+  User,
+  KPI,
+  OKR,
+  ActionPlan,
+  AuditEntry,
+  RoleDefinition,
+} from '@/types'
 
 export const MOCK_BUS: BU[] = [
   { id: 'bu-1', name: 'Varejo', slug: 'varejo' },
@@ -6,6 +14,69 @@ export const MOCK_BUS: BU[] = [
   { id: 'bu-3', name: 'ERP', slug: 'erp' },
   { id: 'bu-4', name: 'Fintech', slug: 'fintech' },
   { id: 'bu-5', name: 'Corporativo', slug: 'corp' },
+]
+
+export const MOCK_ROLES: RoleDefinition[] = [
+  {
+    id: 'DIRECTOR_GENERAL',
+    name: 'Diretor Geral (Admin)',
+    description: 'Acesso completo a todos os módulos e configurações.',
+    isSystem: true,
+    permissions: {
+      OKR: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'EXPORT'],
+      KPI: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'EXPORT'],
+      REPORT: ['VIEW', 'EXPORT'],
+      SETTINGS: ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
+    },
+  },
+  {
+    id: 'DIRECTOR_BU',
+    name: 'Diretor de BU',
+    description: 'Gestão completa da Unidade de Negócio.',
+    isSystem: true,
+    permissions: {
+      OKR: ['VIEW', 'CREATE', 'EDIT', 'EXPORT'],
+      KPI: ['VIEW', 'CREATE', 'EDIT', 'EXPORT'],
+      REPORT: ['VIEW', 'EXPORT'],
+      SETTINGS: [],
+    },
+  },
+  {
+    id: 'GPM',
+    name: 'Gestor (GPM)',
+    description: 'Gestão operacional de KPIs e Planos de Ação.',
+    isSystem: true,
+    permissions: {
+      OKR: ['VIEW', 'EDIT'],
+      KPI: ['VIEW', 'CREATE', 'EDIT'],
+      REPORT: ['VIEW'],
+      SETTINGS: [],
+    },
+  },
+  {
+    id: 'PM',
+    name: 'Gerente de Projeto',
+    description: 'Acesso a visualização e edição limitada.',
+    isSystem: true,
+    permissions: {
+      OKR: ['VIEW'],
+      KPI: ['VIEW', 'EDIT'],
+      REPORT: ['VIEW'],
+      SETTINGS: [],
+    },
+  },
+  {
+    id: 'VIEWER',
+    name: 'Visualizador',
+    description: 'Apenas leitura.',
+    isSystem: true,
+    permissions: {
+      OKR: ['VIEW'],
+      KPI: ['VIEW'],
+      REPORT: ['VIEW'],
+      SETTINGS: [],
+    },
+  },
 ]
 
 export const MOCK_USERS: User[] = [
@@ -81,7 +152,6 @@ export const MOCK_KPIS: KPI[] = [
     status: 'YELLOW',
     lastUpdated: '2024-06-01T10:00:00Z',
     history: [
-      // 2023 History for Comparison
       {
         date: '2023-12-01',
         value: 1000000,
@@ -94,7 +164,6 @@ export const MOCK_KPIS: KPI[] = [
         updatedByUserId: 'u-2',
         timestamp: '2023-06-01T10:00:00Z',
       },
-      // 2024 History
       {
         date: '2024-01-01',
         value: 1200000,
@@ -256,7 +325,7 @@ export const MOCK_OKRS: OKR[] = [
     endYear: 2026,
     weight: 100,
     ownerId: 'u-1',
-    kpiIds: ['kpi-1'], // Sharing KPI for demo purposes
+    kpiIds: ['kpi-1'],
     progress: 60,
     status: 'GREEN',
   },

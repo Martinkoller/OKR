@@ -48,10 +48,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { format } from 'date-fns'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export const AnnualComparison = () => {
-  const { okrs, kpis } = useDataStore()
-  const { selectedBUId } = useUserStore()
+  const { okrs, kpis, addAuditEntry } = useDataStore()
+  const { selectedBUId, currentUser } = useUserStore()
+  const { canExport } = usePermissions()
 
   const currentYear = new Date().getFullYear()
   const [yearA, setYearA] = useState<string>((currentYear - 1).toString())
@@ -81,6 +83,8 @@ export const AnnualComparison = () => {
   }
 
   const handleExportCSV = () => {
+    if (!canExport('REPORT')) return
+
     const csvData: any[] = []
 
     // Add OKRs
@@ -130,10 +134,30 @@ export const AnnualComparison = () => {
       csvData,
       `comparativo_anual_${yearA}_vs_${yearB}_${timestamp}.csv`,
     )
+
+    if (currentUser) {
+      addAuditEntry({
+        entityType: 'REPORT',
+        action: 'EXPORT',
+        reason: `Exportação de Comparativo Anual ${yearA} vs ${yearB}`,
+        userId: currentUser.id,
+      })
+    }
   }
 
   const handleExportPDF = () => {
+    if (!canExport('REPORT')) return
+
     window.print()
+
+    if (currentUser) {
+      addAuditEntry({
+        entityType: 'REPORT',
+        action: 'EXPORT',
+        reason: `Impressão de Comparativo Anual ${yearA} vs ${yearB}`,
+        userId: currentUser.id,
+      })
+    }
   }
 
   return (
@@ -154,24 +178,26 @@ export const AnnualComparison = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 no-print">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Exportar Relatório
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportPDF}>
-                <Printer className="h-4 w-4 mr-2" />
-                Imprimir / Salvar PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportCSV}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Exportar Dados CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canExport('REPORT') && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Exportar Relatório
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir / Salvar PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Dados CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm ml-2">
             <Select value={yearA} onValueChange={setYearA}>

@@ -26,15 +26,20 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/useUserStore'
 import { Button } from '@/components/ui/button'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export default function Layout() {
   const { pathname } = useLocation()
   const { currentUser } = useUserStore()
+  const { checkPermission } = usePermissions()
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + '/')
 
-  const isAdmin = currentUser?.role === 'DIRECTOR_GENERAL'
+  const canViewSettings = checkPermission('SETTINGS', 'VIEW')
+  const canViewOKR = checkPermission('OKR', 'VIEW')
+  const canViewKPI = checkPermission('KPI', 'VIEW')
+  const canViewReport = checkPermission('REPORT', 'VIEW')
 
   return (
     <SidebarProvider>
@@ -60,33 +65,43 @@ export default function Layout() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/okrs')}>
-                    <Link to="/okrs">
-                      <Target className="h-4 w-4" />
-                      <span>Meus OKRs</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/kpis')}>
-                    <Link to="/kpis">
-                      <BarChart3 className="h-4 w-4" />
-                      <span>KPIs</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/analytics/comparison')}
-                  >
-                    <Link to="/analytics/comparison">
-                      <PieChart className="h-4 w-4" />
-                      <span>Comparativo Anual</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+
+                {canViewOKR && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/okrs')}>
+                      <Link to="/okrs">
+                        <Target className="h-4 w-4" />
+                        <span>Meus OKRs</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
+                {canViewKPI && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/kpis')}>
+                      <Link to="/kpis">
+                        <BarChart3 className="h-4 w-4" />
+                        <span>KPIs</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
+                {canViewReport && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/analytics/comparison')}
+                    >
+                      <Link to="/analytics/comparison">
+                        <PieChart className="h-4 w-4" />
+                        <span>Comparativo Anual</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/audit')}>
                     <Link to="/audit">
@@ -121,7 +136,7 @@ export default function Layout() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {isAdmin && (
+                {canViewSettings && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -129,7 +144,7 @@ export default function Layout() {
                     >
                       <Link to="/settings/users">
                         <Users className="h-4 w-4" />
-                        <span>Usuários</span>
+                        <span>Admin</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

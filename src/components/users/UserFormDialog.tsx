@@ -28,19 +28,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { User, Role } from '@/types'
+import { User } from '@/types'
 import { useUserStore } from '@/stores/useUserStore'
 import { useEffect } from 'react'
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
   email: z.string().email('Insira um e-mail válido.'),
-  role: z.enum(
-    ['DIRECTOR_GENERAL', 'DIRECTOR_BU', 'GPM', 'PM', 'VIEWER'] as const,
-    {
-      required_error: 'Selecione um perfil de acesso.',
-    },
-  ),
+  role: z.string().min(1, 'Selecione um perfil de acesso.'),
   active: z.boolean().default(true),
   buIds: z.array(z.string()).default([]),
   password: z
@@ -63,7 +58,7 @@ export const UserFormDialog = ({
   userToEdit,
   onSubmit,
 }: UserFormDialogProps) => {
-  const { bus } = useUserStore()
+  const { bus, roles } = useUserStore()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -84,7 +79,7 @@ export const UserFormDialog = ({
         role: userToEdit.role,
         active: userToEdit.active,
         buIds: userToEdit.buIds,
-        password: '', // Don't fill password on edit
+        password: '',
       })
     } else {
       form.reset({
@@ -166,15 +161,11 @@ export const UserFormDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="DIRECTOR_GENERAL">
-                          Administrador (Diretor Geral)
-                        </SelectItem>
-                        <SelectItem value="DIRECTOR_BU">
-                          Diretor de BU
-                        </SelectItem>
-                        <SelectItem value="GPM">Gestor (GPM)</SelectItem>
-                        <SelectItem value="PM">Gerente de Projeto</SelectItem>
-                        <SelectItem value="VIEWER">Visualizador</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription>

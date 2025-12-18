@@ -10,11 +10,13 @@ import { Search, Plus, CalendarRange, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { OKR } from '@/types'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export const OKRList = () => {
   const { okrs } = useDataStore()
   const { selectedBUId } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
+  const { canCreate } = usePermissions()
 
   const filteredOKRs = okrs.filter((okr) => {
     const matchesBU = selectedBUId === 'GLOBAL' || okr.buId === selectedBUId
@@ -38,9 +40,11 @@ export const OKRList = () => {
           <h1 className="text-2xl font-bold">Gestão de OKRs</h1>
           <p className="text-muted-foreground">Objetivos e Resultados Chave</p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Novo OKR
-        </Button>
+        {canCreate('OKR') && (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Novo OKR
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
