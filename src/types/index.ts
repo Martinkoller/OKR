@@ -4,14 +4,25 @@ export type BU = {
   id: string
   name: string
   slug: string
+  roleIds?: string[] // Roles inherited by members of this BU
+}
+
+export type Group = {
+  id: string
+  name: string
+  description: string
+  roleIds: string[] // Roles inherited by members of this Group
+  createdAt: string
+  updatedAt: string
 }
 
 export type User = {
   id: string
   name: string
   email: string
-  role: Role
+  role: Role // Direct role
   buIds: string[] // User can belong to multiple BUs
+  groupIds?: string[] // User can belong to multiple Access Groups
   avatarUrl?: string
   active: boolean
 }
@@ -110,6 +121,8 @@ export type AuditEntity =
   | 'ROLE'
   | 'USER'
   | 'REPORT'
+  | 'GROUP'
+  | 'BU'
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
 
 export type AuditEntry = {

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { User, BU, NotificationRule, KPI, RoleDefinition } from '@/types'
-import { MOCK_BUS, MOCK_USERS, MOCK_ROLES } from '@/data/mockData'
+import { User, BU, NotificationRule, KPI, RoleDefinition, Group } from '@/types'
+import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 
 interface UserState {
   currentUser: User | null
@@ -8,6 +8,7 @@ interface UserState {
   bus: BU[]
   users: User[]
   roles: RoleDefinition[]
+  groups: Group[]
   notifications: Array<{
     id: string
     title: string
@@ -30,6 +31,14 @@ interface UserState {
   addRole: (role: RoleDefinition) => void
   updateRole: (role: RoleDefinition) => void
   deleteRole: (roleId: string) => void
+
+  // Group Management
+  addGroup: (group: Group) => void
+  updateGroup: (group: Group) => void
+  deleteGroup: (groupId: string) => void
+
+  // BU Management (Access)
+  updateBURoles: (buId: string, roleIds: string[]) => void
 
   // Notification Rules
   addRule: (rule: NotificationRule) => void
@@ -71,6 +80,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   bus: MOCK_BUS,
   users: MOCK_USERS,
   roles: MOCK_ROLES,
+  groups: MOCK_GROUPS,
   notifications: [
     {
       id: '1',
@@ -101,6 +111,8 @@ export const useUserStore = create<UserState>((set, get) => ({
   updateUser: (user) =>
     set((state) => ({
       users: state.users.map((u) => (u.id === user.id ? user : u)),
+      // If current user is updated, update session too
+      currentUser: state.currentUser?.id === user.id ? user : state.currentUser,
     })),
   deleteUser: (userId) =>
     set((state) => ({
@@ -115,6 +127,24 @@ export const useUserStore = create<UserState>((set, get) => ({
   deleteRole: (roleId) =>
     set((state) => ({
       roles: state.roles.filter((r) => r.id !== roleId),
+    })),
+
+  addGroup: (group) =>
+    set((state) => ({
+      groups: [...state.groups, group],
+    })),
+  updateGroup: (group) =>
+    set((state) => ({
+      groups: state.groups.map((g) => (g.id === group.id ? group : g)),
+    })),
+  deleteGroup: (groupId) =>
+    set((state) => ({
+      groups: state.groups.filter((g) => g.id !== groupId),
+    })),
+
+  updateBURoles: (buId, roleIds) =>
+    set((state) => ({
+      bus: state.bus.map((b) => (b.id === buId ? { ...b, roleIds } : b)),
     })),
 
   addRule: (rule) =>

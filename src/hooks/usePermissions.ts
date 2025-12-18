@@ -2,7 +2,7 @@ import { useUserStore } from '@/stores/useUserStore'
 import { PermissionModule, PermissionAction } from '@/types'
 
 export const usePermissions = () => {
-  const { currentUser, roles } = useUserStore()
+  const { currentUser, roles, groups, bus } = useUserStore()
 
   const checkPermission = (
     module: PermissionModule,
@@ -10,12 +10,48 @@ export const usePermissions = () => {
   ): boolean => {
     if (!currentUser) return false
 
-    const userRole = roles.find((r) => r.id === currentUser.role)
-    if (!userRole) return false
+    // 1. Gather all role IDs applicable to the user
+    const applicableRoleIds = new Set<string>()
 
-    // Director General has implicit full access mostly, but following the matrix strictly:
-    const permissions = userRole.permissions[module] || []
-    return permissions.includes(action)
+    // Direct Role
+    if (currentUser.role) {
+      applicableRoleIds.add(currentUser.role)
+    }
+
+    // Group Inherited Roles
+    if (currentUser.groupIds) {
+      currentUser.groupIds.forEach((groupId) => {
+        const group = groups.find((g) => g.id === groupId)
+        if (group && group.roleIds) {
+          group.roleIds.forEach((roleId) => applicableRoleIds.add(roleId))
+        }
+      })
+    }
+
+    // BU Inherited Roles
+    if (currentUser.buIds) {
+      currentUser.buIds.forEach((buId) => {
+        const bu = bus.find((b) => b.id === buId)
+        if (bu && bu.roleIds) {
+          bu.roleIds.forEach((roleId) => applicableRoleIds.add(roleId))
+        }
+      })
+    }
+
+    // 2. Check if ANY of the applicable roles has the permission
+    let hasPermission = false
+
+    applicableRoleIds.forEach((roleId) => {
+      const roleDef = roles.find((r) => r.id === roleId)
+      if (roleDef) {
+        const permissions = roleDef.permissions[module] || []
+        if (permissions.includes(action)) {
+          hasPermission = true
+        }
+      }
+    })
+
+    return hasPermission
   }
 
   return {

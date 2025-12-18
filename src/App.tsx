@@ -14,6 +14,7 @@ import { Admin } from './pages/admin/Admin'
 import Documentation from './pages/documentation/Documentation'
 import NotificationSettings from './pages/settings/NotificationSettings'
 import { Users } from './pages/settings/Users'
+import { Groups } from './pages/settings/Groups'
 
 const App = () => (
   <BrowserRouter
@@ -45,6 +46,7 @@ const App = () => (
             element={<NotificationSettings />}
           />
           <Route path="/settings/users" element={<Users />} />
+          <Route path="/settings/groups" element={<Groups />} />
           <Route path="/admin" element={<Admin />} />
         </Route>
         <Route path="*" element={<NotFound />} />

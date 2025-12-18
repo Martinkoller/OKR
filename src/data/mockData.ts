@@ -6,14 +6,15 @@ import {
   ActionPlan,
   AuditEntry,
   RoleDefinition,
+  Group,
 } from '@/types'
 
 export const MOCK_BUS: BU[] = [
-  { id: 'bu-1', name: 'Varejo', slug: 'varejo' },
-  { id: 'bu-2', name: 'Recursos Humanos', slug: 'rh' },
-  { id: 'bu-3', name: 'ERP', slug: 'erp' },
-  { id: 'bu-4', name: 'Fintech', slug: 'fintech' },
-  { id: 'bu-5', name: 'Corporativo', slug: 'corp' },
+  { id: 'bu-1', name: 'Varejo', slug: 'varejo', roleIds: [] },
+  { id: 'bu-2', name: 'Recursos Humanos', slug: 'rh', roleIds: [] },
+  { id: 'bu-3', name: 'ERP', slug: 'erp', roleIds: [] },
+  { id: 'bu-4', name: 'Fintech', slug: 'fintech', roleIds: [] },
+  { id: 'bu-5', name: 'Corporativo', slug: 'corp', roleIds: [] },
 ]
 
 export const MOCK_ROLES: RoleDefinition[] = [
@@ -79,6 +80,25 @@ export const MOCK_ROLES: RoleDefinition[] = [
   },
 ]
 
+export const MOCK_GROUPS: Group[] = [
+  {
+    id: 'grp-1',
+    name: 'Auditores Externos',
+    description: 'Grupo para auditores com permissão de visualização global.',
+    roleIds: ['VIEWER'],
+    createdAt: '2024-01-10T10:00:00Z',
+    updatedAt: '2024-01-10T10:00:00Z',
+  },
+  {
+    id: 'grp-2',
+    name: 'Comitê Estratégico',
+    description: 'Membros do board com acesso a relatórios avançados.',
+    roleIds: ['DIRECTOR_BU'],
+    createdAt: '2024-02-15T14:30:00Z',
+    updatedAt: '2024-02-15T14:30:00Z',
+  },
+]
+
 export const MOCK_USERS: User[] = [
   {
     id: 'u-1',
@@ -86,6 +106,7 @@ export const MOCK_USERS: User[] = [
     email: 'carlos@zucchetti.com',
     role: 'DIRECTOR_GENERAL',
     buIds: ['bu-1', 'bu-2', 'bu-3', 'bu-4', 'bu-5'],
+    groupIds: ['grp-2'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=99',
     active: true,
   },
@@ -95,6 +116,7 @@ export const MOCK_USERS: User[] = [
     email: 'ana@zucchetti.com',
     role: 'DIRECTOR_BU',
     buIds: ['bu-1'],
+    groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=female&seed=12',
     active: true,
   },
@@ -104,6 +126,7 @@ export const MOCK_USERS: User[] = [
     email: 'roberto@zucchetti.com',
     role: 'DIRECTOR_BU',
     buIds: ['bu-2'],
+    groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=45',
     active: true,
   },
@@ -113,6 +136,7 @@ export const MOCK_USERS: User[] = [
     email: 'silva@zucchetti.com',
     role: 'GPM',
     buIds: ['bu-1', 'bu-3'],
+    groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=33',
     active: true,
   },
@@ -122,6 +146,7 @@ export const MOCK_USERS: User[] = [
     email: 'paula@zucchetti.com',
     role: 'PM',
     buIds: ['bu-4'],
+    groupIds: [],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=female&seed=21',
     active: false,
   },
@@ -131,6 +156,7 @@ export const MOCK_USERS: User[] = [
     email: 'vicente@zucchetti.com',
     role: 'VIEWER',
     buIds: ['bu-1'],
+    groupIds: ['grp-1'],
     avatarUrl: 'https://img.usecurling.com/ppl/medium?gender=male&seed=10',
     active: true,
   },

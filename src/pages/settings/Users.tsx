@@ -37,8 +37,16 @@ import { RolesTab } from '@/components/settings/RolesTab'
 import { AuditLogTab } from '@/components/settings/AuditLogTab'
 
 export const Users = () => {
-  const { users, currentUser, addUser, updateUser, deleteUser, bus, roles } =
-    useUserStore()
+  const {
+    users,
+    currentUser,
+    addUser,
+    updateUser,
+    deleteUser,
+    bus,
+    roles,
+    groups,
+  } = useUserStore()
   const { addAuditEntry } = useDataStore()
   const { checkPermission } = usePermissions()
   const { toast } = useToast()
@@ -195,7 +203,8 @@ export const Users = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Usuário</TableHead>
-                    <TableHead>Perfil</TableHead>
+                    <TableHead>Perfil Direto</TableHead>
+                    <TableHead>Grupos</TableHead>
                     <TableHead>BUs</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -226,7 +235,26 @@ export const Users = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {user.groupIds && user.groupIds.length > 0 ? (
+                            user.groupIds.map((gid) => (
+                              <Badge
+                                key={gid}
+                                variant="secondary"
+                                className="text-[10px]"
+                              >
+                                {groups.find((g) => g.id === gid)?.name || gid}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              -
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
                           {user.buIds.length === bus.length ? (
                             <Badge variant="secondary" className="text-[10px]">
                               Todas
