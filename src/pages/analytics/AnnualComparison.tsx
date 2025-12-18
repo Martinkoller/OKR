@@ -66,10 +66,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import { BUFilter } from '@/components/dashboard/BUFilter'
 
 export const AnnualComparison = () => {
   const { okrs, kpis, addAuditEntry } = useDataStore()
-  const { selectedBUId, currentUser } = useUserStore()
+  const { selectedBUIds, currentUser, isGlobalView } = useUserStore()
   const { canExport } = usePermissions()
 
   const currentYear = new Date().getFullYear()
@@ -81,11 +82,13 @@ export const AnnualComparison = () => {
     (currentYear - 2 + i).toString(),
   )
 
+  const isGlobal = isGlobalView()
+
   const filteredOKRs = okrs.filter(
-    (o) => selectedBUId === 'GLOBAL' || o.buId === selectedBUId,
+    (o) => isGlobal || selectedBUIds.includes(o.buId),
   )
   const filteredKPIs = kpis.filter(
-    (k) => selectedBUId === 'GLOBAL' || k.buId === selectedBUId,
+    (k) => isGlobal || selectedBUIds.includes(k.buId),
   )
 
   const getDeltaColor = (valA: number, valB: number) => {
@@ -130,7 +133,7 @@ export const AnnualComparison = () => {
       })
     })
 
-    // Add KPIs
+    // Add KPI
     filteredKPIs.forEach((kpi) => {
       const valA = getKPIValueForYear(kpi, parseInt(yearA))
       const valB = getKPIValueForYear(kpi, parseInt(yearB))
@@ -208,7 +211,8 @@ export const AnnualComparison = () => {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 no-print">
+        <div className="flex flex-col sm:flex-row items-center gap-2 no-print">
+          <BUFilter />
           <div className="flex bg-muted rounded-md p-1">
             <Button
               variant={viewMode === 'table' ? 'secondary' : 'ghost'}
@@ -249,7 +253,7 @@ export const AnnualComparison = () => {
 
           <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm ml-2">
             <Select value={yearA} onValueChange={setYearA}>
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[80px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -262,7 +266,7 @@ export const AnnualComparison = () => {
             </Select>
             <span className="text-muted-foreground text-sm">vs</span>
             <Select value={yearB} onValueChange={setYearB}>
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[80px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -353,6 +357,16 @@ export const AnnualComparison = () => {
                       </TableRow>
                     )
                   })}
+                  {filteredOKRs.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center py-4 text-muted-foreground"
+                      >
+                        Nenhum dado para os filtros selecionados.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

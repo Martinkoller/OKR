@@ -7,6 +7,7 @@ import {
   AuditEntry,
   RoleDefinition,
   Group,
+  Template,
 } from '@/types'
 
 // Updated Hierarchical Structure
@@ -461,5 +462,57 @@ export const MOCK_AUDIT_LOGS: AuditEntry[] = [
     reason: 'Fechamento mensal Junho',
     userId: 'u-2',
     timestamp: '2024-06-01T10:00:00Z',
+  },
+]
+
+export const MOCK_TEMPLATES: Template[] = [
+  {
+    id: 'tpl-1',
+    type: 'OKR',
+    title: 'Crescimento de Receita Recorrente',
+    description:
+      'Foco total em aumentar o faturamento recorrente através de vendas e redução de churn.',
+    scope: 'ANNUAL',
+    suggestedMetrics: [
+      'Aumentar MRR em 20%',
+      'Reduzir Churn Rate para < 1%',
+      'Aumentar ticket médio (ARPU)',
+    ],
+  },
+  {
+    id: 'tpl-2',
+    type: 'OKR',
+    title: 'Excelência Operacional & Qualidade',
+    description:
+      'Melhoria contínua dos processos internos para garantir satisfação do cliente.',
+    scope: 'ANNUAL',
+    suggestedMetrics: [
+      'Manter NPS acima de 70',
+      'Reduzir SLA de atendimento em 50%',
+      'Certificação ISO 9001',
+    ],
+  },
+  {
+    id: 'tpl-3',
+    type: 'KPI',
+    title: 'MRR (Monthly Recurring Revenue)',
+    description:
+      'Receita recorrente mensal. Principal indicador para empresas SaaS.',
+    frequency: 'MONTHLY',
+    kpiType: 'QUANT',
+    unit: 'R$',
+    suggestedGoal: 100000,
+    suggestedMetrics: ['Monitorar mensalmente', 'Focar em novos contratos'],
+  },
+  {
+    id: 'tpl-4',
+    type: 'KPI',
+    title: 'NPS (Net Promoter Score)',
+    description: 'Índice de satisfação e lealdade do cliente.',
+    frequency: 'QUARTERLY',
+    kpiType: 'QUAL',
+    unit: 'pts',
+    suggestedGoal: 75,
+    suggestedMetrics: ['Pesquisa trimestral', 'Tratar detratores'],
   },
 ]

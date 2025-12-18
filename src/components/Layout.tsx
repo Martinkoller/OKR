@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { HeaderNotifications } from '@/components/layout/HeaderNotifications'
 
 export default function Layout() {
   const { pathname } = useLocation()
@@ -202,6 +203,7 @@ export default function Layout() {
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background print:hidden">
             <SidebarTrigger className="-ml-1" />
             <div className="ml-auto flex items-center gap-4">
+              <HeaderNotifications />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">

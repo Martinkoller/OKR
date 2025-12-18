@@ -30,9 +30,11 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
-import { KPI } from '@/types'
+import { KPI, Template } from '@/types'
 import { useToast } from '@/hooks/use-toast'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { FileText } from 'lucide-react'
+import { TemplateSelector } from '@/components/templates/TemplateSelector'
 
 const formSchema = z.object({
   name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
@@ -60,6 +62,7 @@ export const KPIFormDialog = ({
   const { bus, users, currentUser } = useUserStore()
   const { addKPI } = useDataStore()
   const { toast } = useToast()
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -121,11 +124,35 @@ export const KPIFormDialog = ({
     }
   }
 
+  const handleTemplateSelect = (template: Template) => {
+    form.setValue('name', template.title)
+    form.setValue('description', template.description)
+    if (template.frequency) form.setValue('frequency', template.frequency)
+    if (template.kpiType) form.setValue('type', template.kpiType)
+    if (template.unit) form.setValue('unit', template.unit)
+    if (template.suggestedGoal) form.setValue('goal', template.suggestedGoal)
+
+    setIsTemplateOpen(false)
+    toast({
+      title: 'Modelo Carregado',
+      description: 'Os campos foram preenchidos com o modelo selecionado.',
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Novo Indicador de Desempenho (KPI)</DialogTitle>
+          <DialogTitle className="flex justify-between items-center">
+            <span>Novo Indicador de Desempenho (KPI)</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTemplateOpen(true)}
+            >
+              <FileText className="mr-2 h-4 w-4" /> Usar Modelo
+            </Button>
+          </DialogTitle>
           <DialogDescription>
             Configure as métricas e metas do indicador.
           </DialogDescription>
@@ -330,6 +357,13 @@ export const KPIFormDialog = ({
           </form>
         </Form>
       </DialogContent>
+
+      <TemplateSelector
+        type="KPI"
+        isOpen={isTemplateOpen}
+        onClose={() => setIsTemplateOpen(false)}
+        onSelect={handleTemplateSelect}
+      />
     </Dialog>
   )
 }

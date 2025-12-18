@@ -1,11 +1,20 @@
 import { create } from 'zustand'
-import { User, BU, NotificationRule, KPI, RoleDefinition, Group } from '@/types'
+import {
+  User,
+  BU,
+  NotificationRule,
+  KPI,
+  RoleDefinition,
+  Group,
+  Alert,
+} from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 
 interface UserState {
   isAuthenticated: boolean
   currentUser: User | null
-  selectedBUId: string | 'GLOBAL'
+  // Refactored to support multiple BUs
+  selectedBUIds: string[] // If contains 'GLOBAL', show all
   bus: BU[]
   users: User[]
   roles: RoleDefinition[]
@@ -16,6 +25,8 @@ interface UserState {
     message: string
     read: boolean
   }>
+  // New alerts system
+  alerts: Alert[]
   notificationRules: NotificationRule[]
 
   // Auth
@@ -24,9 +35,12 @@ interface UserState {
 
   // Actions
   setCurrentUser: (user: User) => void
-  setSelectedBU: (buId: string | 'GLOBAL') => void
+  // Updated selector action
+  setSelectedBUs: (buIds: string[]) => void
   addNotification: (title: string, message: string) => void
   markNotificationAsRead: (id: string) => void
+  markAlertAsRead: (id: string) => void
+  triggerSecurityAlert: (message: string, severity?: Alert['severity']) => void
 
   // User Management
   addUser: (user: User) => void
@@ -61,6 +75,7 @@ interface UserState {
 
   // Helpers
   getAllAccessibleBUIds: (userId: string) => string[]
+  isGlobalView: () => boolean
 }
 
 const MOCK_RULES: NotificationRule[] = [
@@ -79,12 +94,13 @@ const MOCK_RULES: NotificationRule[] = [
 export const useUserStore = create<UserState>((set, get) => ({
   isAuthenticated: false,
   currentUser: null,
-  selectedBUId: 'GLOBAL',
+  selectedBUIds: ['GLOBAL'],
   bus: MOCK_BUS,
   users: MOCK_USERS,
   roles: MOCK_ROLES,
   groups: MOCK_GROUPS,
   notifications: [],
+  alerts: [],
   notificationRules: MOCK_RULES,
 
   login: (email) => {
@@ -97,11 +113,49 @@ export const useUserStore = create<UserState>((set, get) => ({
   },
 
   logout: () => {
-    set({ currentUser: null, isAuthenticated: false, selectedBUId: 'GLOBAL' })
+    set({
+      currentUser: null,
+      isAuthenticated: false,
+      selectedBUIds: ['GLOBAL'],
+    })
   },
 
   setCurrentUser: (user) => set({ currentUser: user }),
-  setSelectedBU: (buId) => set({ selectedBUId: buId }),
+
+  setSelectedBUs: (buIds) => {
+    // Security check: verify if user has access to these BUs
+    const { currentUser, getAllAccessibleBUIds, triggerSecurityAlert } = get()
+    if (!currentUser) return
+
+    // If GLOBAL is selected, check if user is admin or has global access?
+    // In this mock, we assume 'GLOBAL' view is allowed if user has access to at least one BU,
+    // but the data filtering will handle what they actually see.
+    // However, if they try to select a specific BU ID they don't have...
+
+    if (buIds.includes('GLOBAL')) {
+      set({ selectedBUIds: ['GLOBAL'] })
+      return
+    }
+
+    const accessibleIds = getAllAccessibleBUIds(currentUser.id)
+    const unauthorizedIds = buIds.filter(
+      (id) => id !== 'GLOBAL' && !accessibleIds.includes(id),
+    )
+
+    if (unauthorizedIds.length > 0) {
+      triggerSecurityAlert(
+        `Tentativa de acesso não autorizado às BUs: ${unauthorizedIds.join(', ')}`,
+        'HIGH',
+      )
+      // Reject change or strip unauthorized
+      const validIds = buIds.filter((id) => accessibleIds.includes(id))
+      set({ selectedBUIds: validIds.length > 0 ? validIds : ['GLOBAL'] })
+      return
+    }
+
+    set({ selectedBUIds: buIds })
+  },
+
   addNotification: (title, message) =>
     set((state) => ({
       notifications: [
@@ -109,12 +163,35 @@ export const useUserStore = create<UserState>((set, get) => ({
         ...state.notifications,
       ],
     })),
+
   markNotificationAsRead: (id) =>
     set((state) => ({
       notifications: state.notifications.map((n) =>
         n.id === id ? { ...n, read: true } : n,
       ),
     })),
+
+  markAlertAsRead: (id) =>
+    set((state) => ({
+      alerts: state.alerts.map((a) => (a.id === id ? { ...a, read: true } : a)),
+    })),
+
+  triggerSecurityAlert: (message, severity = 'MEDIUM') => {
+    set((state) => ({
+      alerts: [
+        {
+          id: `alert-${Date.now()}`,
+          type: 'SECURITY',
+          title: 'Alerta de Segurança',
+          message,
+          timestamp: new Date().toISOString(),
+          read: false,
+          severity,
+        },
+        ...state.alerts,
+      ],
+    }))
+  },
 
   addUser: (user) => set((state) => ({ users: [...state.users, user] })),
   updateUser: (user) =>
@@ -181,13 +258,65 @@ export const useUserStore = create<UserState>((set, get) => ({
     })),
 
   processKPINotification: (kpi, oldStatus, isRetroactive) => {
-    // Notification logic implementation
+    const state = get()
+
+    // Find matching rules
+    state.notificationRules.forEach((rule) => {
+      // Check BU Scope
+      if (rule.buId !== 'ALL' && rule.buId !== kpi.buId) return
+
+      // Check KPI Type
+      if (rule.kpiType !== 'ALL' && rule.kpiType !== kpi.type) return
+
+      let shouldTrigger = false
+
+      // Check Trigger
+      if (
+        rule.triggerCondition === 'STATUS_RED' &&
+        kpi.status === 'RED' &&
+        oldStatus !== 'RED'
+      ) {
+        shouldTrigger = true
+      } else if (
+        rule.triggerCondition === 'STATUS_CHANGE' &&
+        kpi.status !== oldStatus
+      ) {
+        shouldTrigger = true
+      } else if (
+        rule.triggerCondition === 'RETROACTIVE_EDIT' &&
+        isRetroactive
+      ) {
+        shouldTrigger = true
+      }
+
+      if (shouldTrigger && rule.channels.includes('PORTAL')) {
+        // Create Alert
+        set((s) => ({
+          alerts: [
+            {
+              id: `alert-${Date.now()}-${Math.random()}`,
+              type: 'PERFORMANCE',
+              title: `Alerta de Performance: ${kpi.name}`,
+              message: `O KPI ${kpi.name} disparou a regra "${rule.name}". Novo Status: ${kpi.status}`,
+              timestamp: new Date().toISOString(),
+              read: false,
+              link: `/kpis/${kpi.id}`,
+            },
+            ...s.alerts,
+          ],
+        }))
+      }
+    })
   },
 
   getAllAccessibleBUIds: (userId) => {
     const state = get()
     const user = state.users.find((u) => u.id === userId)
     if (!user) return []
+
+    // If admin, give all? MOCK_ROLES says DIRECTOR_GENERAL has access to all configs,
+    // but data access might still be BU scoped or he has 'bu-5' (holding) which gives all.
+    // For simplicity, we rely on BU hierarchy traversal.
 
     const explicitBUIds = user.buIds
     const allBUs = state.bus
@@ -205,5 +334,10 @@ export const useUserStore = create<UserState>((set, get) => ({
     explicitBUIds.forEach((id) => findDescendants(id))
 
     return Array.from(accessibleIds)
+  },
+
+  isGlobalView: () => {
+    const { selectedBUIds } = get()
+    return selectedBUIds.includes('GLOBAL')
   },
 }))

@@ -159,6 +159,39 @@ export type NotificationRule = {
   isActive: boolean
 }
 
+// New Types for Templates and Alerts
+export type TemplateType = 'OKR' | 'KPI'
+
+export interface Template {
+  id: string
+  type: TemplateType
+  title: string
+  description: string
+  // KPI Specifics
+  frequency?: KPIFrequency
+  kpiType?: KPIType
+  unit?: string
+  suggestedGoal?: number
+  // OKR Specifics
+  scope?: OKRScope
+  // Common
+  suggestedMetrics?: string[]
+}
+
+export type AlertType = 'PERFORMANCE' | 'SECURITY'
+export type SecuritySeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+export interface Alert {
+  id: string
+  type: AlertType
+  title: string
+  message: string
+  timestamp: string
+  read: boolean
+  severity?: SecuritySeverity // Only for security
+  link?: string // Optional link to entity
+}
+
 export const KPI_STATUS_COLORS = {
   GREEN: 'bg-emerald-500',
   YELLOW: 'bg-amber-500',

@@ -14,19 +14,20 @@ import {
 } from '@/components/ui/tooltip'
 import { DashboardSummary } from '@/components/dashboard/DashboardSummary'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
+import { BUFilter } from '@/components/dashboard/BUFilter'
 
 export default function Index() {
-  const { selectedBUId } = useUserStore()
+  const { selectedBUIds, isGlobalView } = useUserStore()
   const { okrs, kpis, actionPlans } = useDataStore()
 
-  const filteredOKRs =
-    selectedBUId === 'GLOBAL'
-      ? okrs
-      : okrs.filter((o) => o.buId === selectedBUId)
-  const filteredKPIs =
-    selectedBUId === 'GLOBAL'
-      ? kpis
-      : kpis.filter((k) => k.buId === selectedBUId)
+  const isGlobal = isGlobalView()
+
+  const filteredOKRs = isGlobal
+    ? okrs
+    : okrs.filter((o) => selectedBUIds.includes(o.buId))
+  const filteredKPIs = isGlobal
+    ? kpis
+    : kpis.filter((k) => selectedBUIds.includes(k.buId))
 
   const totalOKRs = filteredOKRs.length
   const avgProgress =
@@ -61,16 +62,19 @@ export default function Index() {
           </h1>
           <p className="text-muted-foreground mt-1">
             Visão geral de desempenho -{' '}
-            {selectedBUId === 'GLOBAL'
-              ? 'Zucchetti Brasil'
-              : 'Unidade Selecionada'}
+            {isGlobal
+              ? 'Zucchetti Brasil (Consolidado)'
+              : 'Unidades Selecionadas'}
           </p>
         </div>
-        <Button asChild>
-          <Link to="/okrs">
-            Ver Todos OKRs <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <BUFilter />
+          <Button asChild>
+            <Link to="/okrs">
+              Ver Todos OKRs <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <DashboardSummary
@@ -136,6 +140,11 @@ export default function Index() {
                 <Progress value={okr.progress} className="h-2" />
               </div>
             ))}
+            {filteredOKRs.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                Nenhum OKR encontrado para as unidades selecionadas.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

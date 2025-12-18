@@ -18,17 +18,20 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile'
 import { usePermissions } from '@/hooks/usePermissions'
 import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
+import { BUFilter } from '@/components/dashboard/BUFilter'
 
 export const KPIList = () => {
   const { kpis } = useDataStore()
-  const { selectedBUId } = useUserStore()
+  const { selectedBUIds, isGlobalView } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const isMobile = useIsMobile()
   const { canCreate } = usePermissions()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  const isGlobal = isGlobalView()
+
   const filteredKPIs = kpis.filter((kpi) => {
-    const matchesBU = selectedBUId === 'GLOBAL' || kpi.buId === selectedBUId
+    const matchesBU = isGlobal || selectedBUIds.includes(kpi.buId)
     const matchesSearch = kpi.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
@@ -43,7 +46,8 @@ export const KPIList = () => {
           <p className="text-muted-foreground">Monitoramento de indicadores</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <BUFilter />
+          <Button variant="outline" className="hidden sm:flex">
             <Filter className="mr-2 h-4 w-4" /> Filtros
           </Button>
           {canCreate('KPI') && (
@@ -101,6 +105,11 @@ export const KPIList = () => {
                   </div>
                 </div>
               ))}
+              {filteredKPIs.length === 0 && (
+                <div className="p-4 text-center text-muted-foreground">
+                  Nenhum KPI encontrado.
+                </div>
+              )}
             </div>
           ) : (
             <Table>
@@ -153,6 +162,16 @@ export const KPIList = () => {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredKPIs.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center text-muted-foreground py-8"
+                    >
+                      Nenhum KPI encontrado para os filtros selecionados.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           )}

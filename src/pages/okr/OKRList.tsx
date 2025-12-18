@@ -12,16 +12,19 @@ import { useState } from 'react'
 import { OKR } from '@/types'
 import { usePermissions } from '@/hooks/usePermissions'
 import { OKRFormDialog } from '@/components/okr/OKRFormDialog'
+import { BUFilter } from '@/components/dashboard/BUFilter'
 
 export const OKRList = () => {
   const { okrs } = useDataStore()
-  const { selectedBUId } = useUserStore()
+  const { selectedBUIds, isGlobalView } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const { canCreate } = usePermissions()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  const isGlobal = isGlobalView()
+
   const filteredOKRs = okrs.filter((okr) => {
-    const matchesBU = selectedBUId === 'GLOBAL' || okr.buId === selectedBUId
+    const matchesBU = isGlobal || selectedBUIds.includes(okr.buId)
     const matchesSearch = okr.title
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
@@ -42,11 +45,14 @@ export const OKRList = () => {
           <h1 className="text-2xl font-bold">Gestão de OKRs</h1>
           <p className="text-muted-foreground">Objetivos e Resultados Chave</p>
         </div>
-        {canCreate('OKR') && (
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Novo OKR
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <BUFilter />
+          {canCreate('OKR') && (
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Novo OKR
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

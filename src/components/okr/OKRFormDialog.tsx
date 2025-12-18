@@ -30,9 +30,11 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
-import { OKR } from '@/types'
+import { OKR, Template } from '@/types'
 import { useToast } from '@/hooks/use-toast'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { FileText } from 'lucide-react'
+import { TemplateSelector } from '@/components/templates/TemplateSelector'
 
 const formSchema = z.object({
   title: z.string().min(3, 'O título deve ter pelo menos 3 caracteres'),
@@ -59,6 +61,7 @@ export const OKRFormDialog = ({
   const { bus, users, currentUser } = useUserStore()
   const { addOKR } = useDataStore()
   const { toast } = useToast()
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false)
 
   const currentYear = new Date().getFullYear().toString()
 
@@ -119,11 +122,33 @@ export const OKRFormDialog = ({
     }
   }
 
+  const handleTemplateSelect = (template: Template) => {
+    form.setValue('title', template.title)
+    form.setValue('description', template.description)
+    if (template.scope) {
+      form.setValue('scope', template.scope)
+    }
+    setIsTemplateOpen(false)
+    toast({
+      title: 'Modelo Carregado',
+      description: 'Os campos foram preenchidos com o modelo selecionado.',
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Novo Objetivo Estratégico (OKR)</DialogTitle>
+          <DialogTitle className="flex justify-between items-center">
+            <span>Novo Objetivo Estratégico (OKR)</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTemplateOpen(true)}
+            >
+              <FileText className="mr-2 h-4 w-4" /> Usar Modelo
+            </Button>
+          </DialogTitle>
           <DialogDescription>
             Defina o objetivo, escopo e responsabilidades.
           </DialogDescription>
@@ -304,6 +329,13 @@ export const OKRFormDialog = ({
           </form>
         </Form>
       </DialogContent>
+
+      <TemplateSelector
+        type="OKR"
+        isOpen={isTemplateOpen}
+        onClose={() => setIsTemplateOpen(false)}
+        onSelect={handleTemplateSelect}
+      />
     </Dialog>
   )
 }

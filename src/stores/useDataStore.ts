@@ -6,12 +6,14 @@ import {
   KPIStatus,
   KPIHistoryEntry,
   ActionPlan,
+  Template,
 } from '@/types'
 import {
   MOCK_KPIS,
   MOCK_OKRS,
   MOCK_ACTION_PLANS,
   MOCK_AUDIT_LOGS,
+  MOCK_TEMPLATES,
 } from '@/data/mockData'
 import { calculateStatus, calculateOKRProgress } from '@/lib/kpi-utils'
 import { useUserStore } from '@/stores/useUserStore'
@@ -21,6 +23,7 @@ interface DataState {
   kpis: KPI[]
   actionPlans: ActionPlan[]
   auditLogs: AuditEntry[]
+  templates: Template[]
 
   updateKPI: (
     kpiId: string,
@@ -42,6 +45,7 @@ export const useDataStore = create<DataState>((set) => ({
   kpis: MOCK_KPIS,
   actionPlans: MOCK_ACTION_PLANS,
   auditLogs: MOCK_AUDIT_LOGS,
+  templates: MOCK_TEMPLATES,
 
   updateKPI: (kpiId, value, userId, comment, isRetroactive, reason) => {
     set((state) => {
