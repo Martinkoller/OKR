@@ -34,6 +34,7 @@ import {
   ClipboardList,
   Edit2,
   Trash2,
+  Eye,
 } from 'lucide-react'
 import { ActionPlanModal } from '@/components/ActionPlanModal'
 import { ActionPlan } from '@/types'
@@ -56,14 +57,12 @@ export const ActionPlansDashboard = () => {
     undefined,
   )
 
-  // Permission Check (Simplified)
   const canEdit =
     checkPermission('KPI', 'EDIT') || checkPermission('OKR', 'EDIT')
   const canDelete = checkPermission('KPI', 'DELETE')
 
   const isGlobal = isGlobalView()
 
-  // Helper to get entity name
   const getEntityName = (plan: ActionPlan) => {
     if (plan.entityType === 'KPI') {
       return kpis.find((k) => k.id === plan.entityId)?.name || 'KPI Removido'
@@ -71,7 +70,6 @@ export const ActionPlansDashboard = () => {
     return okrs.find((o) => o.id === plan.entityId)?.title || 'OKR Removido'
   }
 
-  // Helper to get BU for filtering
   const getPlanBUId = (plan: ActionPlan) => {
     if (plan.entityType === 'KPI') {
       return kpis.find((k) => k.id === plan.entityId)?.buId
@@ -79,19 +77,15 @@ export const ActionPlansDashboard = () => {
     return okrs.find((o) => o.id === plan.entityId)?.buId
   }
 
-  // Filter Plans
   const filteredPlans = actionPlans.filter((plan) => {
-    // 1. BU Filter
     const planBuId = getPlanBUId(plan)
     if (!isGlobal && planBuId && !selectedBUIds.includes(planBuId)) return false
 
-    // 2. Search
     const searchMatch =
       plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       plan.description.toLowerCase().includes(searchTerm.toLowerCase())
     if (!searchMatch) return false
 
-    // 3. Status
     if (statusFilter !== 'ALL' && plan.status !== statusFilter) return false
 
     return true
@@ -215,6 +209,8 @@ export const ActionPlansDashboard = () => {
                       (t) => t.status === 'DONE',
                     ).length
                     const totalTasks = plan.tasks.length
+                    const isFinalized =
+                      plan.status === 'COMPLETED' || plan.status === 'CANCELLED'
 
                     return (
                       <TableRow key={plan.id}>
@@ -269,16 +265,19 @@ export const ActionPlansDashboard = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {canEdit && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(plan)}
-                              >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(plan)}
+                              title={isFinalized ? 'Visualizar' : 'Editar'}
+                            >
+                              {isFinalized ? (
+                                <Eye className="h-4 w-4 text-gray-500" />
+                              ) : (
                                 <Edit2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {canDelete && (
+                              )}
+                            </Button>
+                            {canDelete && !isFinalized && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -303,11 +302,10 @@ export const ActionPlansDashboard = () => {
       <ActionPlanModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        // Passing undefined entityId/Type forces modal to show selection logic
         entityId={selectedPlan ? selectedPlan.entityId : ''}
         entityType={selectedPlan ? selectedPlan.entityType : 'KPI'}
         existingPlan={selectedPlan}
-        allowEntitySelection={!selectedPlan} // Helper prop to enable entity picker
+        allowEntitySelection={!selectedPlan}
       />
     </div>
   )

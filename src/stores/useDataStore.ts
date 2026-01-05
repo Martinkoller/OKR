@@ -46,7 +46,7 @@ interface DataState {
   updateOKR: (okr: OKR, userId: string) => void
 
   saveActionPlan: (plan: ActionPlan, userId: string) => void
-  deleteActionPlan: (planId: string, userId: string) => void // Added
+  deleteActionPlan: (planId: string, userId: string) => void
 
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
   addOKR: (okr: OKR, userId: string) => void
@@ -285,18 +285,50 @@ export const useDataStore = create<DataState>((set, get) => ({
           updatedAt: new Date().toISOString(),
         }
 
-        // Audit diff logic for tasks
+        // Action Plan Field Changes
         if (oldPlan.status !== plan.status) {
-          auditDetail += `Status alterado de ${oldPlan.status} para ${plan.status}. `
+          auditDetail += `[Plano] Status: ${oldPlan.status} → ${plan.status}. `
         }
+        if (oldPlan.title !== plan.title) {
+          auditDetail += `[Plano] Título atualizado. `
+        }
+        if (oldPlan.description !== plan.description) {
+          auditDetail += `[Plano] Descrição atualizada. `
+        }
+        if (oldPlan.dueDate !== plan.dueDate) {
+          auditDetail += `[Plano] Prazo: ${oldPlan.dueDate} → ${plan.dueDate}. `
+        }
+
+        // Task Changes
         if (oldPlan.tasks.length !== plan.tasks.length) {
-          auditDetail += `Tarefas alteradas (${oldPlan.tasks.length} -> ${plan.tasks.length}). `
+          auditDetail += `[Tarefas] Quantidade: ${oldPlan.tasks.length} → ${plan.tasks.length}. `
         }
-        // Check for task updates
+
+        // Detailed Task Updates
         plan.tasks.forEach((newTask) => {
           const oldTask = oldPlan.tasks.find((t) => t.id === newTask.id)
-          if (oldTask && oldTask.status !== newTask.status) {
-            auditDetail += `Tarefa "${newTask.description}" status: ${oldTask.status} -> ${newTask.status}. `
+          if (!oldTask) {
+            auditDetail += `[Nova Tarefa] "${newTask.description}". `
+          } else {
+            if (oldTask.status !== newTask.status) {
+              auditDetail += `[Tarefa] "${newTask.description}" Status: ${oldTask.status} → ${newTask.status}. `
+            }
+            if (oldTask.description !== newTask.description) {
+              auditDetail += `[Tarefa] Descrição alterada: "${oldTask.description}" → "${newTask.description}". `
+            }
+            if (oldTask.deadline !== newTask.deadline) {
+              auditDetail += `[Tarefa] "${newTask.description}" Prazo: ${oldTask.deadline} → ${newTask.deadline}. `
+            }
+            if (oldTask.ownerId !== newTask.ownerId) {
+              auditDetail += `[Tarefa] "${newTask.description}" Responsável alterado. `
+            }
+          }
+        })
+
+        // Deleted tasks
+        oldPlan.tasks.forEach((oldTask) => {
+          if (!plan.tasks.find((t) => t.id === oldTask.id)) {
+            auditDetail += `[Tarefa Removida] "${oldTask.description}". `
           }
         })
       } else {
@@ -309,6 +341,10 @@ export const useDataStore = create<DataState>((set, get) => ({
           ...state.actionPlans,
         ]
         auditDetail = `Plano criado com ${plan.tasks.length} tarefas.`
+      }
+
+      if (!auditDetail) {
+        auditDetail = 'Nenhuma alteração detectada.'
       }
 
       const auditEntry: AuditEntry = {

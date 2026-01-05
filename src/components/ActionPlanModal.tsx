@@ -26,12 +26,22 @@ import {
 } from '@/types'
 import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
-import { Plus, Trash2, Calendar as CalendarIcon, Link2 } from 'lucide-react'
-import { format } from 'date-fns'
+import {
+  Plus,
+  Trash2,
+  Calendar as CalendarIcon,
+  Link2,
+  Lock,
+  History,
+  FileText,
+} from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { KPISelector } from '@/components/okr/KPISelector'
 import { OKRSelector } from '@/components/okr/OKRSelector'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AuditLogTimeline } from '@/components/AuditLogTimeline'
 
 interface ActionPlanModalProps {
   isOpen: boolean
@@ -51,9 +61,10 @@ export const ActionPlanModal = ({
   allowEntitySelection,
 }: ActionPlanModalProps) => {
   const { currentUser, users } = useUserStore()
-  const { saveActionPlan, kpis, okrs } = useDataStore()
+  const { saveActionPlan, kpis, okrs, auditLogs } = useDataStore()
   const { toast } = useToast()
 
+  const [activeTab, setActiveTab] = useState('details')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<ActionPlanStatus>('DRAFT')
@@ -87,7 +98,6 @@ export const ActionPlanModal = ({
       setDueDate('')
       setTasks([])
       setJustification('')
-      // If we are allowed to select, we might start empty
       if (allowEntitySelection) {
         setSelectedEntityId('')
       } else {
@@ -97,6 +107,7 @@ export const ActionPlanModal = ({
       setLinkedKpiIds([])
       setLinkedOkrIds([])
     }
+    setActiveTab('details')
   }, [existingPlan, isOpen, entityId, entityType, allowEntitySelection])
 
   const canEdit =
@@ -104,6 +115,19 @@ export const ActionPlanModal = ({
     currentUser?.role === 'PM' ||
     currentUser?.role === 'DIRECTOR_BU' ||
     currentUser?.role === 'DIRECTOR_GENERAL'
+
+  const isFinalized =
+    existingPlan?.status === 'COMPLETED' || existingPlan?.status === 'CANCELLED'
+  const isReadOnly = isFinalized
+
+  const planLogs = existingPlan
+    ? auditLogs
+        .filter((l) => l.entityId === existingPlan.id)
+        .sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        )
+    : []
 
   const handleSave = () => {
     if (!title || !dueDate) {
@@ -184,272 +208,345 @@ export const ActionPlanModal = ({
     setTasks(newTasks)
   }
 
-  if (!canEdit) return null
+  // Simplified view for read only modal
+  const readOnlyBadge = isReadOnly ? (
+    <div className="flex items-center gap-2 mb-4">
+      <Alert className="bg-muted border-muted-foreground/20">
+        <Lock className="h-4 w-4 text-muted-foreground" />
+        <AlertTitle className="text-muted-foreground">
+          Modo Somente Leitura
+        </AlertTitle>
+        <AlertDescription className="text-muted-foreground text-xs">
+          Este plano foi finalizado ({status}). Edições não são permitidas para
+          manter a integridade do histórico.
+        </AlertDescription>
+      </Alert>
+    </div>
+  ) : null
+
+  if (!canEdit && !existingPlan) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {existingPlan ? 'Editar Plano de Ação' : 'Novo Plano de Ação'}
+            {existingPlan
+              ? isReadOnly
+                ? 'Detalhes do Plano de Ação'
+                : 'Editar Plano de Ação'
+              : 'Novo Plano de Ação'}
           </DialogTitle>
           <DialogDescription>
-            Defina as ações corretivas e seus responsáveis.
+            {isReadOnly
+              ? 'Visualize as informações e histórico deste plano.'
+              : 'Defina as ações corretivas e seus responsáveis.'}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Título do Plano</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Recuperação de Meta Q3"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status do Plano</Label>
-                <Select
-                  value={status}
-                  onValueChange={(val: ActionPlanStatus) => setStatus(val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DRAFT">Rascunho</SelectItem>
-                    <SelectItem value="IN_PROGRESS">Em Andamento</SelectItem>
-                    <SelectItem value="COMPLETED">Concluído</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col min-h-0"
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-2">
+            <TabsTrigger value="details">
+              <FileText className="h-4 w-4 mr-2" /> Detalhes & Tarefas
+            </TabsTrigger>
+            <TabsTrigger value="history" disabled={!existingPlan}>
+              <History className="h-4 w-4 mr-2" /> Histórico de Alterações
+            </TabsTrigger>
+          </TabsList>
 
-            {allowEntitySelection && (
-              <div className="space-y-4 border p-4 rounded-md bg-muted/20">
+          <TabsContent value="details" className="flex-1 min-h-0">
+            <ScrollArea className="h-full pr-4">
+              <div className="space-y-6 py-2">
+                {readOnlyBadge}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Tipo de Vínculo (Principal)</Label>
+                    <Label htmlFor="title">Título do Plano</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Ex: Recuperação de Meta Q3"
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status do Plano</Label>
                     <Select
-                      value={selectedEntityType}
-                      onValueChange={(val: 'KPI' | 'OKR') => {
-                        setSelectedEntityType(val)
-                        setSelectedEntityId('') // Reset when type changes
-                      }}
+                      value={status}
+                      onValueChange={(val: ActionPlanStatus) => setStatus(val)}
+                      disabled={isReadOnly}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="KPI">KPI</SelectItem>
-                        <SelectItem value="OKR">OKR</SelectItem>
+                        <SelectItem value="DRAFT">Rascunho</SelectItem>
+                        <SelectItem value="IN_PROGRESS">
+                          Em Andamento
+                        </SelectItem>
+                        <SelectItem value="COMPLETED">Concluído</SelectItem>
+                        <SelectItem value="CANCELLED">Cancelado</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {allowEntitySelection && !isReadOnly && (
+                  <div className="space-y-4 border p-4 rounded-md bg-muted/20">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Tipo de Vínculo (Principal)</Label>
+                        <Select
+                          value={selectedEntityType}
+                          onValueChange={(val: 'KPI' | 'OKR') => {
+                            setSelectedEntityType(val)
+                            setSelectedEntityId('') // Reset when type changes
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="KPI">KPI</SelectItem>
+                            <SelectItem value="OKR">OKR</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Entidade Principal</Label>
+                        <Select
+                          value={selectedEntityId}
+                          onValueChange={setSelectedEntityId}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedEntityType === 'KPI'
+                              ? kpis.map((k) => (
+                                  <SelectItem key={k.id} value={k.id}>
+                                    {k.name}
+                                  </SelectItem>
+                                ))
+                              : okrs.map((o) => (
+                                  <SelectItem key={o.id} value={o.id}>
+                                    {o.title}
+                                  </SelectItem>
+                                ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show linked entities even in read only if they exist */}
+                {!isReadOnly && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Link2 className="h-4 w-4" /> Conexões Estratégicas
+                    </h4>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Vincular OKRs Relacionados</Label>
+                        <OKRSelector
+                          selectedOkrIds={linkedOkrIds}
+                          onSelectionChange={setLinkedOkrIds}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Vincular KPIs Relacionados</Label>
+                        <KPISelector
+                          selectedKpiIds={linkedKpiIds}
+                          onSelectionChange={setLinkedKpiIds}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">Data Alvo</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      disabled={isReadOnly}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label>Entidade Principal</Label>
-                    <Select
-                      value={selectedEntityId}
-                      onValueChange={setSelectedEntityId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectedEntityType === 'KPI'
-                          ? kpis.map((k) => (
-                              <SelectItem key={k.id} value={k.id}>
-                                {k.name}
-                              </SelectItem>
-                            ))
-                          : okrs.map((o) => (
-                              <SelectItem key={o.id} value={o.id}>
-                                {o.title}
-                              </SelectItem>
-                            ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Responsável</Label>
+                    <div className="h-10 flex items-center px-3 border rounded-md bg-muted text-sm text-muted-foreground">
+                      {users.find(
+                        (u) =>
+                          u.id === (existingPlan?.ownerId || currentUser?.id),
+                      )?.name || 'Desconhecido'}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            <div className="space-y-4 border-t pt-4">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <Link2 className="h-4 w-4" /> Conexões Estratégicas
-              </h4>
-
-              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Vincular OKRs Relacionados</Label>
-                  <OKRSelector
-                    selectedOkrIds={linkedOkrIds}
-                    onSelectionChange={setLinkedOkrIds}
+                  <Label htmlFor="description">Descrição / Estratégia</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Descreva a estratégia geral para correção..."
+                    disabled={isReadOnly}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Vincular KPIs Relacionados</Label>
-                  <KPISelector
-                    selectedKpiIds={linkedKpiIds}
-                    onSelectionChange={setLinkedKpiIds}
-                  />
-                </div>
-              </div>
-            </div>
+                {status === 'CANCELLED' && (
+                  <div className="space-y-2 p-4 bg-red-50 border border-red-200 rounded-md">
+                    <Label htmlFor="justification" className="text-red-700">
+                      Justificativa de Cancelamento
+                    </Label>
+                    <Textarea
+                      id="justification"
+                      value={justification}
+                      onChange={(e) => setJustification(e.target.value)}
+                      placeholder={
+                        isReadOnly
+                          ? 'Nenhuma justificativa.'
+                          : 'Por que este plano está sendo cancelado?'
+                      }
+                      className="bg-white"
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                )}
 
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Data Alvo</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Responsável</Label>
-                <div className="h-10 flex items-center px-3 border rounded-md bg-muted text-sm">
-                  {currentUser?.name}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição / Estratégia</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva a estratégia geral para correção..."
-              />
-            </div>
-
-            {status === 'CANCELLED' && (
-              <div className="space-y-2 p-4 bg-red-50 border border-red-200 rounded-md">
-                <Label htmlFor="justification" className="text-red-700">
-                  Justificativa de Cancelamento (Obrigatório)
-                </Label>
-                <Textarea
-                  id="justification"
-                  value={justification}
-                  onChange={(e) => setJustification(e.target.value)}
-                  placeholder="Por que este plano está sendo cancelado?"
-                  className="bg-white"
-                />
-              </div>
-            )}
-
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">
-                  Lista de Tarefas
-                </Label>
-                <Button size="sm" variant="outline" onClick={addTask}>
-                  <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
-                </Button>
-              </div>
-
-              {tasks.length === 0 && (
-                <div className="text-center py-6 border-2 border-dashed rounded-md text-muted-foreground text-sm">
-                  Nenhuma tarefa definida. Adicione passos para execução.
-                </div>
-              )}
-
-              {tasks.map((task, index) => (
-                <div
-                  key={task.id}
-                  className="p-4 border rounded-md space-y-3 bg-gray-50/50"
-                >
-                  <div className="flex gap-4">
-                    <div className="flex-1 space-y-2">
-                      <Label className="text-xs">Descrição da Tarefa</Label>
-                      <Input
-                        value={task.description}
-                        onChange={(e) =>
-                          updateTask(index, 'description', e.target.value)
-                        }
-                        placeholder="O que precisa ser feito?"
-                      />
-                    </div>
-                    <div className="w-8 flex items-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => removeTask(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      Lista de Tarefas
+                    </Label>
+                    {!isReadOnly && (
+                      <Button size="sm" variant="outline" onClick={addTask}>
+                        <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
                       </Button>
-                    </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Responsável</Label>
-                      <Select
-                        value={task.ownerId}
-                        onValueChange={(val) =>
-                          updateTask(index, 'ownerId', val)
-                        }
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Prazo</Label>
-                      <Input
-                        type="date"
-                        className="h-9"
-                        value={task.deadline}
-                        onChange={(e) =>
-                          updateTask(index, 'deadline', e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Status</Label>
-                      <Select
-                        value={task.status}
-                        onValueChange={(val: TaskStatus) =>
-                          updateTask(index, 'status', val)
-                        }
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PENDING">Pendente</SelectItem>
-                          <SelectItem value="DONE">Feito</SelectItem>
-                          <SelectItem value="OVERDUE">Atrasado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </ScrollArea>
 
-        <DialogFooter>
+                  {tasks.length === 0 && (
+                    <div className="text-center py-6 border-2 border-dashed rounded-md text-muted-foreground text-sm">
+                      Nenhuma tarefa definida.
+                    </div>
+                  )}
+
+                  {tasks.map((task, index) => (
+                    <div
+                      key={task.id}
+                      className="p-4 border rounded-md space-y-3 bg-gray-50/50"
+                    >
+                      <div className="flex gap-4">
+                        <div className="flex-1 space-y-2">
+                          <Label className="text-xs">Descrição da Tarefa</Label>
+                          <Input
+                            value={task.description}
+                            onChange={(e) =>
+                              updateTask(index, 'description', e.target.value)
+                            }
+                            placeholder="O que precisa ser feito?"
+                            disabled={isReadOnly}
+                          />
+                        </div>
+                        {!isReadOnly && (
+                          <div className="w-8 flex items-end">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => removeTask(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Responsável</Label>
+                          <Select
+                            value={task.ownerId}
+                            onValueChange={(val) =>
+                              updateTask(index, 'ownerId', val)
+                            }
+                            disabled={isReadOnly}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {users.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Prazo</Label>
+                          <Input
+                            type="date"
+                            className="h-9"
+                            value={task.deadline}
+                            onChange={(e) =>
+                              updateTask(index, 'deadline', e.target.value)
+                            }
+                            disabled={isReadOnly}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Status</Label>
+                          <Select
+                            value={task.status}
+                            onValueChange={(val: TaskStatus) =>
+                              updateTask(index, 'status', val)
+                            }
+                            disabled={isReadOnly}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PENDING">Pendente</SelectItem>
+                              <SelectItem value="DONE">Feito</SelectItem>
+                              <SelectItem value="OVERDUE">Atrasado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent
+            value="history"
+            className="flex-1 min-h-0 overflow-hidden"
+          >
+            <AuditLogTimeline logs={planLogs} className="h-full" />
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            {isReadOnly ? 'Fechar' : 'Cancelar'}
           </Button>
-          <Button onClick={handleSave}>Salvar Plano</Button>
+          {!isReadOnly && <Button onClick={handleSave}>Salvar Plano</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

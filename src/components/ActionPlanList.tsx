@@ -18,6 +18,7 @@ import {
   Calendar,
   CheckCircle2,
   Link2,
+  Eye,
 } from 'lucide-react'
 import { ActionPlanModal } from './ActionPlanModal'
 import { ActionPlan } from '@/types'
@@ -41,13 +42,9 @@ export const ActionPlanList = ({
   )
 
   const plans = actionPlans.filter((p) => {
-    // 1. Is this entity the primary target?
     if (p.entityId === entityId) return true
-
-    // 2. Is this entity linked secondarily?
     if (entityType === 'OKR' && p.linkedOkrIds?.includes(entityId)) return true
     if (entityType === 'KPI' && p.linkedKpiIds?.includes(entityId)) return true
-
     return false
   })
 
@@ -114,6 +111,8 @@ export const ActionPlanList = ({
               totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
             const isIndirectLink = plan.entityId !== entityId
+            const isFinalized =
+              plan.status === 'COMPLETED' || plan.status === 'CANCELLED'
 
             return (
               <Card key={plan.id} className="relative overflow-hidden group">
@@ -174,7 +173,15 @@ export const ActionPlanList = ({
                           size="sm"
                           onClick={() => handleEdit(plan)}
                         >
-                          <Edit2 className="h-3 w-3 mr-2" /> Gerenciar Plano
+                          {isFinalized ? (
+                            <>
+                              <Eye className="h-3 w-3 mr-2" /> Visualizar
+                            </>
+                          ) : (
+                            <>
+                              <Edit2 className="h-3 w-3 mr-2" /> Gerenciar
+                            </>
+                          )}
                         </Button>
                       </div>
                     )}
