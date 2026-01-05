@@ -30,7 +30,10 @@ export const KPIList = () => {
 
   const isGlobal = isGlobalView()
 
-  const filteredKPIs = kpis.filter((kpi) => {
+  // Filter out deleted
+  const activeKPIs = kpis.filter((k) => !k.deletedAt)
+
+  const filteredKPIs = activeKPIs.filter((kpi) => {
     const matchesBU = isGlobal || selectedBUIds.includes(kpi.buId)
     const matchesSearch = kpi.name
       .toLowerCase()

@@ -8,11 +8,12 @@ import {
   Settings2,
   ExternalLink,
   Library,
-  FileText,
+  Trash2,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { BUHierarchyManager } from '@/components/settings/BUHierarchyManager'
 import { TemplateManager } from '@/components/templates/TemplateManager'
+import { RecycleBin } from '@/pages/admin/RecycleBin'
 
 export const Admin = () => {
   return (
@@ -32,6 +33,12 @@ export const Admin = () => {
           <TabsTrigger value="templates" className="gap-2">
             <Library className="h-4 w-4" /> Modelos
           </TabsTrigger>
+          <TabsTrigger
+            value="recycle-bin"
+            className="gap-2 text-red-600 data-[state=active]:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" /> Lixeira
+          </TabsTrigger>
           <TabsTrigger value="system" className="gap-2">
             <Settings2 className="h-4 w-4" /> Parâmetros
           </TabsTrigger>
@@ -43,6 +50,10 @@ export const Admin = () => {
 
         <TabsContent value="templates">
           <TemplateManager />
+        </TabsContent>
+
+        <TabsContent value="recycle-bin">
+          <RecycleBin />
         </TabsContent>
 
         <TabsContent value="system">

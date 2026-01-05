@@ -23,6 +23,7 @@ import {
   CalendarDays,
   List,
   Trash2,
+  GitCompare,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
@@ -75,6 +76,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { VersionComparison } from '@/components/history/VersionComparison'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -95,9 +97,25 @@ export const KPIDetail = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isVersionCompareOpen, setIsVersionCompareOpen] = useState(false)
 
   if (!kpi) {
     return <div className="p-8 text-center">KPI não encontrado.</div>
+  }
+
+  if (kpi.deletedAt) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center space-y-4">
+        <div className="p-4 rounded-full bg-red-100">
+          <AlertTriangle className="h-8 w-8 text-red-600" />
+        </div>
+        <h1 className="text-xl font-bold">KPI Excluído</h1>
+        <p className="text-muted-foreground">Este indicador está na lixeira.</p>
+        <Button asChild variant="outline">
+          <Link to="/admin">Ir para Lixeira</Link>
+        </Button>
+      </div>
+    )
   }
 
   // Chart Data Preparation
@@ -491,9 +509,18 @@ export const KPIDetail = () => {
 
           <Card className="page-break">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <History className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Histórico de Auditoria</CardTitle>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Histórico de Auditoria</CardTitle>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsVersionCompareOpen(true)}
+                >
+                  <GitCompare className="mr-2 h-4 w-4" /> Comparar Versões
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -568,7 +595,7 @@ export const KPIDetail = () => {
             <AlertDialogDescription>
               Esta ação removerá o KPI <strong>{kpi.name}</strong> e todos os
               seus dados. O histórico completo permanecerá disponível apenas nos
-              relatórios de auditoria.
+              relatórios de auditoria e na Lixeira para restauração.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -582,6 +609,13 @@ export const KPIDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <VersionComparison
+        entityId={kpi.id}
+        entityType="KPI"
+        isOpen={isVersionCompareOpen}
+        onClose={() => setIsVersionCompareOpen(false)}
+      />
     </div>
   )
 }

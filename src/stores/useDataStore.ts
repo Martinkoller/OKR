@@ -49,9 +49,13 @@ interface DataState {
   addOKR: (okr: OKR, userId: string) => void
   addKPI: (kpi: KPI, userId: string) => void
 
-  // Deletion Actions
+  // Deletion Actions (Updated for Soft Delete)
   deleteOKR: (okrId: string, userId: string) => void
   deleteKPI: (kpiId: string, userId: string) => void
+
+  // Restore Actions
+  restoreOKR: (okrId: string, userId: string) => void
+  restoreKPI: (kpiId: string, userId: string) => void
 
   // Template Management
   addTemplate: (template: Template, userId: string) => void
@@ -357,10 +361,13 @@ export const useDataStore = create<DataState>((set, get) => ({
     })
   },
 
+  // Soft Delete OKR
   deleteOKR: (okrId, userId) => {
     set((state) => {
       const okrToDelete = state.okrs.find((o) => o.id === okrId)
       if (!okrToDelete) return state
+
+      const updatedOKR = { ...okrToDelete, deletedAt: new Date().toISOString() }
 
       const auditEntry: AuditEntry = {
         id: Math.random().toString(36).substr(2, 9),
@@ -370,39 +377,30 @@ export const useDataStore = create<DataState>((set, get) => ({
         reason: `Exclusão de OKR: ${okrToDelete.title}`,
         userId,
         timestamp: new Date().toISOString(),
-        details: 'OKR removido (Soft Delete)',
+        details: 'OKR movido para a Lixeira (Soft Delete)',
       }
 
+      // Trigger Notification
+      setTimeout(() => {
+        useUserStore
+          .getState()
+          .notifyDeletion(okrToDelete.title, 'OKR', userId, okrToDelete.ownerId)
+      }, 0)
+
       return {
-        okrs: state.okrs.filter((o) => o.id !== okrId),
+        okrs: state.okrs.map((o) => (o.id === okrId ? updatedOKR : o)),
         auditLogs: [auditEntry, ...state.auditLogs],
       }
     })
   },
 
-  addKPI: (kpi, userId) => {
-    set((state) => {
-      const auditEntry: AuditEntry = {
-        id: Math.random().toString(36).substr(2, 9),
-        entityId: kpi.id,
-        entityType: 'KPI',
-        action: 'CREATE',
-        reason: `Criação de KPI: ${kpi.name}`,
-        userId,
-        timestamp: new Date().toISOString(),
-      }
-
-      return {
-        kpis: [...state.kpis, kpi],
-        auditLogs: [auditEntry, ...state.auditLogs],
-      }
-    })
-  },
-
+  // Soft Delete KPI
   deleteKPI: (kpiId, userId) => {
     set((state) => {
       const kpiToDelete = state.kpis.find((k) => k.id === kpiId)
       if (!kpiToDelete) return state
+
+      const updatedKPI = { ...kpiToDelete, deletedAt: new Date().toISOString() }
 
       const auditEntry: AuditEntry = {
         id: Math.random().toString(36).substr(2, 9),
@@ -412,26 +410,99 @@ export const useDataStore = create<DataState>((set, get) => ({
         reason: `Exclusão de KPI: ${kpiToDelete.name}`,
         userId,
         timestamp: new Date().toISOString(),
-        details: 'KPI removido (Soft Delete)',
+        details: 'KPI movido para a Lixeira (Soft Delete)',
       }
 
-      // Also need to remove this KPI from any OKR linking to it
+      // Recalculate OKRs without this KPI (effectively treating it as removed for calc)
+      // Note: We keep the ID in kpiIds, but since calculateOKRProgress filters KPIs,
+      // we need to make sure we pass only active KPIs or modify calculation logic.
+      // Currently calculateOKRProgress uses `kpis`. We should update `kpis` first.
+
+      const newKPIs = state.kpis.map((k) => (k.id === kpiId ? updatedKPI : k))
+
+      // We should probably exclude deleted KPIs from OKR calculation
+      const activeKPIs = newKPIs.filter((k) => !k.deletedAt)
+
       const newOKRs = state.okrs.map((okr) => {
         if (okr.kpiIds.includes(kpiId)) {
-          const newKpiIds = okr.kpiIds.filter((id) => id !== kpiId)
-          // Need to recalculate progress without this KPI
-          const remainingKPIs = state.kpis.filter((k) => k.id !== kpiId) // Temporarily filter out
-          const { progress, status } = calculateOKRProgress(
-            { ...okr, kpiIds: newKpiIds },
-            remainingKPIs,
-          )
-          return { ...okr, kpiIds: newKpiIds, progress, status }
+          const { progress, status } = calculateOKRProgress(okr, activeKPIs)
+          return { ...okr, progress, status }
         }
         return okr
       })
 
+      // Trigger Notification
+      setTimeout(() => {
+        useUserStore
+          .getState()
+          .notifyDeletion(kpiToDelete.name, 'KPI', userId, kpiToDelete.ownerId)
+      }, 0)
+
       return {
-        kpis: state.kpis.filter((k) => k.id !== kpiId),
+        kpis: newKPIs,
+        okrs: newOKRs,
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  restoreOKR: (okrId, userId) => {
+    set((state) => {
+      const okrToRestore = state.okrs.find((o) => o.id === okrId)
+      if (!okrToRestore || !okrToRestore.deletedAt) return state
+
+      const updatedOKR = { ...okrToRestore, deletedAt: undefined }
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: okrId,
+        entityType: 'OKR',
+        action: 'RESTORE',
+        reason: `Restauração de OKR: ${okrToRestore.title}`,
+        userId,
+        timestamp: new Date().toISOString(),
+        details: 'Registro restaurado da lixeira.',
+      }
+
+      return {
+        okrs: state.okrs.map((o) => (o.id === okrId ? updatedOKR : o)),
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  restoreKPI: (kpiId, userId) => {
+    set((state) => {
+      const kpiToRestore = state.kpis.find((k) => k.id === kpiId)
+      if (!kpiToRestore || !kpiToRestore.deletedAt) return state
+
+      const updatedKPI = { ...kpiToRestore, deletedAt: undefined }
+
+      const newKPIs = state.kpis.map((k) => (k.id === kpiId ? updatedKPI : k))
+
+      // Recalculate linked OKRs
+      const activeKPIs = newKPIs.filter((k) => !k.deletedAt)
+      const newOKRs = state.okrs.map((okr) => {
+        if (okr.kpiIds.includes(kpiId)) {
+          const { progress, status } = calculateOKRProgress(okr, activeKPIs)
+          return { ...okr, progress, status }
+        }
+        return okr
+      })
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: kpiId,
+        entityType: 'KPI',
+        action: 'RESTORE',
+        reason: `Restauração de KPI: ${kpiToRestore.name}`,
+        userId,
+        timestamp: new Date().toISOString(),
+        details: 'Registro restaurado da lixeira.',
+      }
+
+      return {
+        kpis: newKPIs,
         okrs: newOKRs,
         auditLogs: [auditEntry, ...state.auditLogs],
       }

@@ -70,6 +70,7 @@ export type KPI = {
   status: KPIStatus
   lastUpdated: string
   history: KPIHistoryEntry[]
+  deletedAt?: string // Soft Delete
 }
 
 export type OKRScope = 'ANNUAL' | 'MULTI_YEAR'
@@ -87,6 +88,7 @@ export type OKR = {
   kpiIds: string[]
   progress: number // 0-100
   status: KPIStatus
+  deletedAt?: string // Soft Delete
 }
 
 export type ActionPlanStatus =
@@ -131,7 +133,13 @@ export type AuditEntity =
   | 'PAGE'
   | 'TEMPLATE'
   | 'INTEGRATION'
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'ACCESS'
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'EXPORT'
+  | 'ACCESS'
+  | 'RESTORE'
 
 export type AuditEntry = {
   id: string

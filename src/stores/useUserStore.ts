@@ -49,6 +49,12 @@ interface UserState {
   markNotificationAsRead: (id: string) => void
   markAlertAsRead: (id: string) => void
   triggerSecurityAlert: (message: string, severity?: Alert['severity']) => void
+  notifyDeletion: (
+    entityName: string,
+    entityType: 'OKR' | 'KPI',
+    performerId: string,
+    ownerId: string,
+  ) => void
 
   // User Management
   addUser: (user: User) => void
@@ -215,6 +221,39 @@ export const useUserStore = create<UserState>((set, get) => ({
         ...state.alerts,
       ],
     }))
+  },
+
+  notifyDeletion: (entityName, entityType, performerId, ownerId) => {
+    const state = get()
+    const performer = state.users.find((u) => u.id === performerId)
+    const performerName = performer ? performer.name : 'Sistema'
+
+    // In a real backend, we would query admins and owner and send notifications.
+    // Here we simulate by adding an alert if the current user is relevant.
+    // However, to make it visible to "Administrator" roles and "Responsible" party:
+    const currentUser = state.currentUser
+    if (!currentUser) return
+
+    // Check if current user is Admin (Director General) or the Owner
+    const isAdmin = currentUser.role === 'DIRECTOR_GENERAL'
+    const isOwner = currentUser.id === ownerId
+
+    if (isAdmin || isOwner) {
+      set((s) => ({
+        alerts: [
+          {
+            id: `del-${Date.now()}`,
+            type: 'PERFORMANCE', // reusing type
+            title: `Exclusão de ${entityType}`,
+            message: `O ${entityType} "${entityName}" foi excluído por ${performerName}.`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            severity: 'HIGH',
+          },
+          ...s.alerts,
+        ],
+      }))
+    }
   },
 
   addUser: (user) => set((state) => ({ users: [...state.users, user] })),

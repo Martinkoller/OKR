@@ -23,7 +23,10 @@ export const OKRList = () => {
 
   const isGlobal = isGlobalView()
 
-  const filteredOKRs = okrs.filter((okr) => {
+  // Filter out deleted OKRs
+  const activeOKRs = okrs.filter((okr) => !okr.deletedAt)
+
+  const filteredOKRs = activeOKRs.filter((okr) => {
     const matchesBU = isGlobal || selectedBUIds.includes(okr.buId)
     const matchesSearch = okr.title
       .toLowerCase()

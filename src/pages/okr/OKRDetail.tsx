@@ -25,6 +25,7 @@ import {
   Edit,
   CalendarDays,
   History,
+  GitCompare,
 } from 'lucide-react'
 import { ActionPlanList } from '@/components/ActionPlanList'
 import { calculateOKRProgressForDate, predictTrend } from '@/lib/kpi-utils'
@@ -54,6 +55,7 @@ import { OKRFormDialog } from '@/components/okr/OKRFormDialog'
 import { usePermissions } from '@/hooks/usePermissions'
 import { downloadICS } from '@/lib/calendar-utils'
 import { AuditLogTimeline } from '@/components/AuditLogTimeline'
+import { VersionComparison } from '@/components/history/VersionComparison'
 
 export const OKRDetail = () => {
   const { id } = useParams()
@@ -64,12 +66,28 @@ export const OKRDetail = () => {
 
   const [isKPIFormOpen, setIsKPIFormOpen] = useState(false)
   const [isEditOKROpen, setIsEditOKROpen] = useState(false)
+  const [isVersionCompareOpen, setIsVersionCompareOpen] = useState(false)
 
   const okr = okrs.find((o) => o.id === id)
   const okrLogs = auditLogs.filter((l) => l.entityId === id)
 
   if (!okr) {
     return <div className="p-8 text-center">OKR não encontrado.</div>
+  }
+
+  if (okr.deletedAt) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center space-y-4">
+        <div className="p-4 rounded-full bg-red-100">
+          <AlertTriangle className="h-8 w-8 text-red-600" />
+        </div>
+        <h1 className="text-xl font-bold">OKR Excluído</h1>
+        <p className="text-muted-foreground">Este objetivo está na lixeira.</p>
+        <Button asChild variant="outline">
+          <Link to="/admin">Ir para Lixeira</Link>
+        </Button>
+      </div>
+    )
   }
 
   const linkedKPIs = kpis.filter((k) => okr.kpiIds.includes(k.id))
@@ -456,9 +474,18 @@ export const OKRDetail = () => {
           {/* Change History */}
           <Card className="page-break">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <History className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Histórico de Auditoria</CardTitle>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Histórico de Auditoria</CardTitle>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsVersionCompareOpen(true)}
+                >
+                  <GitCompare className="mr-2 h-4 w-4" /> Comparar Versões
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -516,6 +543,13 @@ export const OKRDetail = () => {
         open={isEditOKROpen}
         onOpenChange={setIsEditOKROpen}
         okrToEdit={okr}
+      />
+
+      <VersionComparison
+        entityId={okr.id}
+        entityType="OKR"
+        isOpen={isVersionCompareOpen}
+        onClose={() => setIsVersionCompareOpen(false)}
       />
     </div>
   )
