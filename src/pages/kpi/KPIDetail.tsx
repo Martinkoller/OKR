@@ -24,6 +24,8 @@ import {
   List,
   Trash2,
   GitCompare,
+  ClipboardList,
+  CheckSquare,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
@@ -77,12 +79,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { VersionComparison } from '@/components/history/VersionComparison'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export const KPIDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { kpis, updateKPI, deleteKPI, auditLogs } = useDataStore()
-  const { currentUser, addNotification } = useUserStore()
+  const { kpis, updateKPI, deleteKPI, auditLogs, actionPlans } = useDataStore()
+  const { currentUser, addNotification, users } = useUserStore()
   const { canDelete } = usePermissions()
   const { toast } = useToast()
 
@@ -118,9 +129,24 @@ export const KPIDetail = () => {
     )
   }
 
+  // Tasks Logic
+  const linkedPlans = actionPlans.filter(
+    (ap) =>
+      (ap.entityType === 'KPI' && ap.entityId === kpi.id) ||
+      (ap.linkedKpiIds && ap.linkedKpiIds.includes(kpi.id)),
+  )
+
+  const allTasks = linkedPlans.flatMap((ap) =>
+    ap.tasks.map((t) => ({
+      ...t,
+      planTitle: ap.title,
+      planStatus: ap.status,
+      planId: ap.id,
+    })),
+  )
+
   // Chart Data Preparation
   const rawHistory = [...kpi.history]
-  // Sort oldest first
   rawHistory.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
@@ -132,7 +158,6 @@ export const KPIDetail = () => {
     isForecast: false,
   }))
 
-  // If history is empty, show current
   if (actualData.length === 0) {
     actualData.push({
       date: format(new Date(), 'dd/MM'),
@@ -142,7 +167,6 @@ export const KPIDetail = () => {
     })
   }
 
-  // Generate Forecast
   const forecastPoints = predictTrend(kpi.history, 3)
   const forecastData = forecastPoints.map((p) => ({
     date: format(parseISO(p.date), 'dd/MM', { locale: ptBR }),
@@ -204,7 +228,6 @@ export const KPIDetail = () => {
     })
     setNewValue('')
     setJustification('')
-    // Reset date to today for next input
     setReferenceDate(new Date().toISOString().split('T')[0])
     setIsDialogOpen(false)
   }
@@ -418,7 +441,6 @@ export const KPIDetail = () => {
                 </div>
               )}
 
-              {/* Update Form */}
               <div className="space-y-4 pt-4 border-t no-print">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium">Atualizar Medição</h3>
@@ -503,30 +525,127 @@ export const KPIDetail = () => {
             </CardContent>
           </Card>
 
-          <div className="no-print">
-            <ActionPlanList entityId={kpi.id} entityType="KPI" />
-          </div>
+          <Tabs defaultValue="plans" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="plans" className="flex-1">
+                Planos de Ação
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="flex-1">
+                Tarefas Vinculadas
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex-1">
+                Auditoria & Mudanças
+              </TabsTrigger>
+            </TabsList>
 
-          <Card className="page-break">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>Histórico de Auditoria</CardTitle>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsVersionCompareOpen(true)}
-                >
-                  <GitCompare className="mr-2 h-4 w-4" /> Comparar Versões
-                </Button>
+            <TabsContent value="plans" className="mt-4">
+              <div className="no-print">
+                <ActionPlanList entityId={kpi.id} entityType="KPI" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <AuditLogTimeline logs={kpiLogs} className="h-[400px]" />
-            </CardContent>
-          </Card>
+            </TabsContent>
+
+            <TabsContent value="tasks" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                    Tarefas em Aberto
+                  </CardTitle>
+                  <CardDescription>
+                    Lista de atividades de todos os planos de ação vinculados.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tarefa</TableHead>
+                        <TableHead>Plano Origem</TableHead>
+                        <TableHead>Responsável</TableHead>
+                        <TableHead>Prazo</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allTasks.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            Nenhuma tarefa pendente.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        allTasks.map((task) => (
+                          <TableRow key={task.id}>
+                            <TableCell className="font-medium">
+                              {task.description}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {task.planTitle}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {users.find((u) => u.id === task.ownerId)?.name ||
+                                'N/A'}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(task.deadline), 'dd/MM/yy', {
+                                locale: ptBR,
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  task.status === 'DONE'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                                className={
+                                  task.status === 'DONE'
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                    : ''
+                                }
+                              >
+                                {task.status === 'DONE'
+                                  ? 'Concluído'
+                                  : task.status === 'PENDING'
+                                    ? 'Pendente'
+                                    : 'Atrasado'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <History className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Histórico de Auditoria</CardTitle>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsVersionCompareOpen(true)}
+                    >
+                      <GitCompare className="mr-2 h-4 w-4" /> Comparar Versões
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <AuditLogTimeline logs={kpiLogs} className="h-[400px]" />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="space-y-6">

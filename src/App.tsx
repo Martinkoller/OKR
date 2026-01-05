@@ -24,7 +24,8 @@ import { Users } from './pages/settings/Users'
 import { Groups } from './pages/settings/Groups'
 import LoginPage from './components/auth/LoginPage'
 import BIIntegration from './pages/integrations/BIIntegration'
-import { useUserStore } from './stores/useUserStore'
+import { ActionPlansDashboard } from './pages/action-plans/ActionPlansDashboard'
+import { useUserStore } from '@/stores/useUserStore'
 
 const ProtectedRoute = () => {
   const { isAuthenticated } = useUserStore()
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/okrs/:id" element={<OKRDetail />} />
             <Route path="/kpis" element={<KPIList />} />
             <Route path="/kpis/:id" element={<KPIDetail />} />
+            <Route path="/action-plans" element={<ActionPlansDashboard />} />
             <Route
               path="/analytics/comparison"
               element={<AnnualComparison />}

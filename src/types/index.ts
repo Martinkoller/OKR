@@ -18,7 +18,12 @@ export type Group = {
   updatedAt: string
 }
 
-export type PermissionModule = 'OKR' | 'KPI' | 'REPORT' | 'SETTINGS'
+export type PermissionModule =
+  | 'OKR'
+  | 'KPI'
+  | 'REPORT'
+  | 'SETTINGS'
+  | 'ACTION_PLAN'
 export type PermissionAction = 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'EXPORT'
 
 export type User = {
@@ -110,7 +115,7 @@ export type ActionPlan = {
   id: string
   title: string
   description: string
-  entityId: string // KPI ID or OKR ID
+  entityId: string // KPI ID or OKR ID (Primary)
   entityType: 'KPI' | 'OKR'
   status: ActionPlanStatus
   dueDate: string // ISO Date
@@ -118,6 +123,7 @@ export type ActionPlan = {
   tasks: ActionPlanTask[]
   createdAt: string
   updatedAt: string
+  linkedKpiIds?: string[] // Additional linked KPIs
 }
 
 export type AuditEntity =

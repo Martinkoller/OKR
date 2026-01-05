@@ -26,6 +26,7 @@ import {
   LogOut,
   FileBarChart,
   Database,
+  ClipboardList,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/useUserStore'
@@ -52,7 +53,7 @@ export default function Layout() {
 
   useEffect(() => {
     if (currentUser) {
-      // Access log
+      // Access log could be here
     }
   }, [pathname, currentUser, addAuditEntry])
 
@@ -63,6 +64,9 @@ export default function Layout() {
   const canViewOKR = checkPermission('OKR', 'VIEW')
   const canViewKPI = checkPermission('KPI', 'VIEW')
   const canViewReport = checkPermission('REPORT', 'VIEW')
+  // For Action Plans, we generally allow viewing if user can view KPIs/OKRs, but strictly:
+  const canViewActionPlans =
+    checkPermission('KPI', 'VIEW') || checkPermission('OKR', 'VIEW')
 
   const handleLogout = () => {
     logout()
@@ -116,6 +120,20 @@ export default function Layout() {
                       <Link to="/kpis">
                         <BarChart3 className="h-4 w-4" />
                         <span>KPIs</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
+                {canViewActionPlans && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/action-plans')}
+                    >
+                      <Link to="/action-plans">
+                        <ClipboardList className="h-4 w-4" />
+                        <span>Planos de Ação</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

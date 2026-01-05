@@ -30,6 +30,7 @@ import { Plus, Trash2, Calendar as CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { KPISelector } from '@/components/okr/KPISelector'
 
 interface ActionPlanModalProps {
   isOpen: boolean
@@ -37,6 +38,7 @@ interface ActionPlanModalProps {
   entityId: string
   entityType: 'KPI' | 'OKR'
   existingPlan?: ActionPlan
+  allowEntitySelection?: boolean
 }
 
 export const ActionPlanModal = ({
@@ -45,9 +47,10 @@ export const ActionPlanModal = ({
   entityId,
   entityType,
   existingPlan,
+  allowEntitySelection,
 }: ActionPlanModalProps) => {
   const { currentUser, users } = useUserStore()
-  const { saveActionPlan } = useDataStore()
+  const { saveActionPlan, kpis, okrs } = useDataStore()
   const { toast } = useToast()
 
   const [title, setTitle] = useState('')
@@ -57,6 +60,13 @@ export const ActionPlanModal = ({
   const [tasks, setTasks] = useState<ActionPlanTask[]>([])
   const [justification, setJustification] = useState('')
 
+  // Entity Selection State
+  const [selectedEntityType, setSelectedEntityType] = useState<'KPI' | 'OKR'>(
+    entityType,
+  )
+  const [selectedEntityId, setSelectedEntityId] = useState<string>(entityId)
+  const [linkedKpiIds, setLinkedKpiIds] = useState<string[]>([])
+
   useEffect(() => {
     if (existingPlan) {
       setTitle(existingPlan.title)
@@ -64,6 +74,9 @@ export const ActionPlanModal = ({
       setStatus(existingPlan.status)
       setDueDate(existingPlan.dueDate)
       setTasks(existingPlan.tasks)
+      setSelectedEntityId(existingPlan.entityId)
+      setSelectedEntityType(existingPlan.entityType)
+      setLinkedKpiIds(existingPlan.linkedKpiIds || [])
     } else {
       setTitle('')
       setDescription('')
@@ -71,19 +84,37 @@ export const ActionPlanModal = ({
       setDueDate('')
       setTasks([])
       setJustification('')
+      // If we are allowed to select, we might start empty
+      if (allowEntitySelection) {
+        setSelectedEntityId('')
+      } else {
+        setSelectedEntityId(entityId)
+      }
+      setSelectedEntityType(entityType)
+      setLinkedKpiIds([])
     }
-  }, [existingPlan, isOpen])
+  }, [existingPlan, isOpen, entityId, entityType, allowEntitySelection])
 
   const canEdit =
     currentUser?.role === 'GPM' ||
     currentUser?.role === 'PM' ||
-    currentUser?.role === 'DIRECTOR_BU'
+    currentUser?.role === 'DIRECTOR_BU' ||
+    currentUser?.role === 'DIRECTOR_GENERAL'
 
   const handleSave = () => {
     if (!title || !dueDate) {
       toast({
         title: 'Campos Obrigatórios',
         description: 'Por favor, preencha o título e a data alvo.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (allowEntitySelection && !selectedEntityId) {
+      toast({
+        title: 'Vínculo Obrigatório',
+        description: 'Selecione a entidade (KPI ou OKR) principal deste plano.',
         variant: 'destructive',
       })
       return
@@ -102,14 +133,15 @@ export const ActionPlanModal = ({
       id: existingPlan?.id || `ap-${Date.now()}`,
       title,
       description,
-      entityId,
-      entityType,
+      entityId: selectedEntityId,
+      entityType: selectedEntityType,
       status,
       dueDate,
       ownerId: currentUser?.id || 'unknown',
       tasks,
       createdAt: existingPlan?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      linkedKpiIds: linkedKpiIds.length > 0 ? linkedKpiIds : undefined,
     }
 
     saveActionPlan(plan, currentUser?.id || 'system')
@@ -151,13 +183,13 @@ export const ActionPlanModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+      <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {existingPlan ? 'Editar Plano de Ação' : 'Novo Plano de Ação'}
           </DialogTitle>
           <DialogDescription>
-            Defina as ações corretivas para o {entityType}.
+            Defina as ações corretivas e seus responsáveis.
           </DialogDescription>
         </DialogHeader>
 
@@ -191,6 +223,65 @@ export const ActionPlanModal = ({
                 </Select>
               </div>
             </div>
+
+            {allowEntitySelection && (
+              <div className="space-y-4 border p-4 rounded-md bg-muted/20">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Vínculo</Label>
+                    <Select
+                      value={selectedEntityType}
+                      onValueChange={(val: 'KPI' | 'OKR') => {
+                        setSelectedEntityType(val)
+                        setSelectedEntityId('') // Reset when type changes
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KPI">KPI</SelectItem>
+                        <SelectItem value="OKR">OKR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Entidade Principal</Label>
+                    <Select
+                      value={selectedEntityId}
+                      onValueChange={setSelectedEntityId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedEntityType === 'KPI'
+                          ? kpis.map((k) => (
+                              <SelectItem key={k.id} value={k.id}>
+                                {k.name}
+                              </SelectItem>
+                            ))
+                          : okrs.map((o) => (
+                              <SelectItem key={o.id} value={o.id}>
+                                {o.title}
+                              </SelectItem>
+                            ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {selectedEntityType === 'KPI' && (
+                  <div className="space-y-2">
+                    <Label>Outros KPIs Vinculados (Opcional)</Label>
+                    <KPISelector
+                      selectedKpiIds={linkedKpiIds}
+                      onSelectionChange={setLinkedKpiIds}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -235,9 +326,11 @@ export const ActionPlanModal = ({
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-4 pt-4 border-t">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Tarefas</Label>
+                <Label className="text-base font-semibold">
+                  Lista de Tarefas
+                </Label>
                 <Button size="sm" variant="outline" onClick={addTask}>
                   <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
                 </Button>
@@ -245,7 +338,7 @@ export const ActionPlanModal = ({
 
               {tasks.length === 0 && (
                 <div className="text-center py-6 border-2 border-dashed rounded-md text-muted-foreground text-sm">
-                  Nenhuma tarefa definida.
+                  Nenhuma tarefa definida. Adicione passos para execução.
                 </div>
               )}
 

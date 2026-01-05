@@ -7,6 +7,7 @@ import {
   KPIHistoryEntry,
   ActionPlan,
   Template,
+  ActionPlanTask,
 } from '@/types'
 import {
   MOCK_KPIS,
@@ -33,31 +34,30 @@ interface DataState {
     comment?: string,
     isRetroactive?: boolean,
     reason?: string,
-    referenceDate?: string, // New parameter
+    referenceDate?: string,
   ) => void
 
   deleteKPIMeasurement: (
     kpiId: string,
-    timestamp: string, // Identifier for the history entry
+    timestamp: string,
     userId: string,
   ) => void
 
   updateOKR: (okr: OKR, userId: string) => void
 
   saveActionPlan: (plan: ActionPlan, userId: string) => void
+  deleteActionPlan: (planId: string, userId: string) => void // Added
+
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
   addOKR: (okr: OKR, userId: string) => void
   addKPI: (kpi: KPI, userId: string) => void
 
-  // Deletion Actions (Updated for Soft Delete)
   deleteOKR: (okrId: string, userId: string) => void
   deleteKPI: (kpiId: string, userId: string) => void
 
-  // Restore Actions
   restoreOKR: (okrId: string, userId: string) => void
   restoreKPI: (kpiId: string, userId: string) => void
 
-  // Template Management
   addTemplate: (template: Template, userId: string) => void
   updateTemplate: (template: Template, userId: string) => void
   deleteTemplate: (templateId: string, userId: string) => void
@@ -96,7 +96,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         timestamp: new Date().toISOString(),
       }
 
-      // Merge history: if entry exists for same day, replace it (upsert)
       let newHistory = [...oldKPI.history]
       const existingEntryIndex = newHistory.findIndex((h) =>
         isSameDay(parseISO(h.date), parseISO(entryDate)),
@@ -105,14 +104,12 @@ export const useDataStore = create<DataState>((set, get) => ({
       if (existingEntryIndex >= 0) {
         newHistory[existingEntryIndex] = {
           ...newHistoryEntry,
-          // Keep original timestamp if updating? No, update timestamp to now
           timestamp: new Date().toISOString(),
         }
       } else {
         newHistory.push(newHistoryEntry)
       }
 
-      // Sort history to find latest
       newHistory.sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       )
@@ -156,7 +153,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         return okr
       })
 
-      // Trigger Notification Engine
       setTimeout(() => {
         useUserStore
           .getState()
@@ -177,17 +173,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       if (kpiIndex === -1) return state
 
       const oldKPI = state.kpis[kpiIndex]
-
-      // Find the entry to delete for audit log
       const entryToDelete = oldKPI.history.find(
         (h) => h.timestamp === timestamp,
       )
       if (!entryToDelete) return state
 
-      // Filter out
       const newHistory = oldKPI.history.filter((h) => h.timestamp !== timestamp)
 
-      // Recalculate state
       let newValue = 0
       let newStatus: KPIStatus = 'RED'
 
@@ -247,7 +239,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       const oldProgress = oldOKR?.progress
       const oldStatus = oldOKR?.status
 
-      // Calculate progress and status based on current KPIs (in case kpiIds changed)
       const { progress, status } = calculateOKRProgress(okr, state.kpis)
       const updatedOKR = { ...okr, progress, status }
 
@@ -266,7 +257,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         timestamp: new Date().toISOString(),
       }
 
-      // Trigger Notification Engine for OKR
       setTimeout(() => {
         useUserStore
           .getState()
@@ -285,16 +275,30 @@ export const useDataStore = create<DataState>((set, get) => ({
       const existingIndex = state.actionPlans.findIndex((p) => p.id === plan.id)
       let newPlans = [...state.actionPlans]
       let action: 'CREATE' | 'UPDATE' = 'CREATE'
-      let oldValue = undefined
-      let newValue: string | number = plan.status
+      let auditDetail = ''
 
       if (existingIndex >= 0) {
         action = 'UPDATE'
-        oldValue = state.actionPlans[existingIndex].status
+        const oldPlan = state.actionPlans[existingIndex]
         newPlans[existingIndex] = {
           ...plan,
           updatedAt: new Date().toISOString(),
         }
+
+        // Audit diff logic for tasks
+        if (oldPlan.status !== plan.status) {
+          auditDetail += `Status alterado de ${oldPlan.status} para ${plan.status}. `
+        }
+        if (oldPlan.tasks.length !== plan.tasks.length) {
+          auditDetail += `Tarefas alteradas (${oldPlan.tasks.length} -> ${plan.tasks.length}). `
+        }
+        // Check for task updates
+        plan.tasks.forEach((newTask) => {
+          const oldTask = oldPlan.tasks.find((t) => t.id === newTask.id)
+          if (oldTask && oldTask.status !== newTask.status) {
+            auditDetail += `Tarefa "${newTask.description}" status: ${oldTask.status} -> ${newTask.status}. `
+          }
+        })
       } else {
         newPlans = [
           {
@@ -304,6 +308,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           },
           ...state.actionPlans,
         ]
+        auditDetail = `Plano criado com ${plan.tasks.length} tarefas.`
       }
 
       const auditEntry: AuditEntry = {
@@ -311,10 +316,34 @@ export const useDataStore = create<DataState>((set, get) => ({
         entityId: plan.id,
         entityType: 'ACTION_PLAN',
         action,
-        field: 'status',
-        oldValue,
-        newValue,
-        reason: action === 'CREATE' ? 'Criação' : 'Atualização',
+        reason:
+          action === 'CREATE' ? 'Criação de Plano' : 'Atualização de Plano',
+        details: auditDetail.trim(),
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+
+      return {
+        actionPlans: newPlans,
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  deleteActionPlan: (planId, userId) => {
+    set((state) => {
+      const plan = state.actionPlans.find((p) => p.id === planId)
+      if (!plan) return state
+
+      const newPlans = state.actionPlans.filter((p) => p.id !== planId)
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: planId,
+        entityType: 'ACTION_PLAN',
+        action: 'DELETE',
+        reason: 'Plano excluído',
+        details: `Plano "${plan.title}" removido.`,
         userId,
         timestamp: new Date().toISOString(),
       }
@@ -340,7 +369,6 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   addOKR: (okr, userId) => {
     set((state) => {
-      // Calculate initial progress based on linked KPIs
       const { progress, status } = calculateOKRProgress(okr, state.kpis)
       const newOKR = { ...okr, progress, status }
 
@@ -361,7 +389,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     })
   },
 
-  // Soft Delete OKR
   deleteOKR: (okrId, userId) => {
     set((state) => {
       const okrToDelete = state.okrs.find((o) => o.id === okrId)
@@ -380,7 +407,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         details: 'OKR movido para a Lixeira (Soft Delete)',
       }
 
-      // Trigger Notification
       setTimeout(() => {
         useUserStore
           .getState()
@@ -394,7 +420,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     })
   },
 
-  // Soft Delete KPI
   deleteKPI: (kpiId, userId) => {
     set((state) => {
       const kpiToDelete = state.kpis.find((k) => k.id === kpiId)
@@ -413,14 +438,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         details: 'KPI movido para a Lixeira (Soft Delete)',
       }
 
-      // Recalculate OKRs without this KPI (effectively treating it as removed for calc)
-      // Note: We keep the ID in kpiIds, but since calculateOKRProgress filters KPIs,
-      // we need to make sure we pass only active KPIs or modify calculation logic.
-      // Currently calculateOKRProgress uses `kpis`. We should update `kpis` first.
-
       const newKPIs = state.kpis.map((k) => (k.id === kpiId ? updatedKPI : k))
-
-      // We should probably exclude deleted KPIs from OKR calculation
       const activeKPIs = newKPIs.filter((k) => !k.deletedAt)
 
       const newOKRs = state.okrs.map((okr) => {
@@ -431,7 +449,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         return okr
       })
 
-      // Trigger Notification
       setTimeout(() => {
         useUserStore
           .getState()
@@ -479,8 +496,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       const updatedKPI = { ...kpiToRestore, deletedAt: undefined }
 
       const newKPIs = state.kpis.map((k) => (k.id === kpiId ? updatedKPI : k))
-
-      // Recalculate linked OKRs
       const activeKPIs = newKPIs.filter((k) => !k.deletedAt)
       const newOKRs = state.okrs.map((okr) => {
         if (okr.kpiIds.includes(kpiId)) {
