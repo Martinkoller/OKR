@@ -103,12 +103,22 @@ export type ActionPlanStatus =
   | 'CANCELLED'
 export type TaskStatus = 'PENDING' | 'DONE' | 'OVERDUE'
 
+export type Attachment = {
+  id: string
+  name: string
+  url: string
+  type: string
+  size: number
+  uploadedAt: string
+}
+
 export type ActionPlanTask = {
   id: string
   description: string
   ownerId: string
   deadline: string // ISO Date
   status: TaskStatus
+  attachments?: Attachment[]
 }
 
 export type ActionPlan = {
@@ -206,7 +216,7 @@ export interface Template {
   suggestedMetrics?: string[]
 }
 
-export type AlertType = 'PERFORMANCE' | 'SECURITY'
+export type AlertType = 'PERFORMANCE' | 'SECURITY' | 'TASK'
 export type SecuritySeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
 export interface Alert {

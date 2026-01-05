@@ -34,6 +34,7 @@ import {
   Lock,
   History,
   FileText,
+  Paperclip,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -42,6 +43,8 @@ import { OKRSelector } from '@/components/okr/OKRSelector'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AuditLogTimeline } from '@/components/AuditLogTimeline'
+import { TaskAttachmentsDialog } from '@/components/action-plan/TaskAttachmentsDialog'
+import { Badge } from '@/components/ui/badge'
 
 interface ActionPlanModalProps {
   isOpen: boolean
@@ -71,6 +74,11 @@ export const ActionPlanModal = ({
   const [dueDate, setDueDate] = useState('')
   const [tasks, setTasks] = useState<ActionPlanTask[]>([])
   const [justification, setJustification] = useState('')
+
+  // Attachments Dialog State
+  const [attachmentsTaskIndex, setAttachmentsTaskIndex] = useState<
+    number | null
+  >(null)
 
   // Entity Selection State
   const [selectedEntityType, setSelectedEntityType] = useState<'KPI' | 'OKR'>(
@@ -188,6 +196,7 @@ export const ActionPlanModal = ({
       ownerId: '',
       deadline: '',
       status: 'PENDING',
+      attachments: [],
     }
     setTasks([...tasks, newTask])
   }
@@ -206,6 +215,14 @@ export const ActionPlanModal = ({
     const newTasks = [...tasks]
     newTasks.splice(index, 1)
     setTasks(newTasks)
+  }
+
+  const handleUpdateTaskFromDialog = (updatedTask: ActionPlanTask) => {
+    if (attachmentsTaskIndex !== null) {
+      const newTasks = [...tasks]
+      newTasks[attachmentsTaskIndex] = updatedTask
+      setTasks(newTasks)
+    }
   }
 
   // Simplified view for read only modal
@@ -450,7 +467,23 @@ export const ActionPlanModal = ({
                     >
                       <div className="flex gap-4">
                         <div className="flex-1 space-y-2">
-                          <Label className="text-xs">Descrição da Tarefa</Label>
+                          <div className="flex justify-between items-start">
+                            <Label className="text-xs">
+                              Descrição da Tarefa
+                            </Label>
+                            {/* Attachment Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => setAttachmentsTaskIndex(index)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              {task.attachments && task.attachments.length > 0
+                                ? `${task.attachments.length} Anexos`
+                                : 'Anexos'}
+                            </Button>
+                          </div>
                           <Input
                             value={task.description}
                             onChange={(e) =>
@@ -549,6 +582,16 @@ export const ActionPlanModal = ({
           {!isReadOnly && <Button onClick={handleSave}>Salvar Plano</Button>}
         </DialogFooter>
       </DialogContent>
+
+      {attachmentsTaskIndex !== null && tasks[attachmentsTaskIndex] && (
+        <TaskAttachmentsDialog
+          isOpen={attachmentsTaskIndex !== null}
+          onClose={() => setAttachmentsTaskIndex(null)}
+          task={tasks[attachmentsTaskIndex]}
+          onUpdateTask={handleUpdateTaskFromDialog}
+          isReadOnly={isReadOnly}
+        />
+      )}
     </Dialog>
   )
 }

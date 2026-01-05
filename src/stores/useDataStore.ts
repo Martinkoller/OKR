@@ -322,6 +322,12 @@ export const useDataStore = create<DataState>((set, get) => ({
             if (oldTask.ownerId !== newTask.ownerId) {
               auditDetail += `[Tarefa] "${newTask.description}" Responsável alterado. `
             }
+            // Check for attachments changes
+            const oldAttachments = oldTask.attachments?.length || 0
+            const newAttachments = newTask.attachments?.length || 0
+            if (oldAttachments !== newAttachments) {
+              auditDetail += `[Tarefa] "${newTask.description}" Anexos: ${oldAttachments} → ${newAttachments}. `
+            }
           }
         })
 

@@ -356,6 +356,7 @@ export const MOCK_ACTION_PLANS: ActionPlan[] = [
         ownerId: 'u-3',
         deadline: '2024-07-01',
         status: 'DONE',
+        attachments: [],
       },
       {
         id: 't-2',
@@ -363,6 +364,7 @@ export const MOCK_ACTION_PLANS: ActionPlan[] = [
         ownerId: 'u-3',
         deadline: '2024-07-15',
         status: 'PENDING',
+        attachments: [],
       },
     ],
     createdAt: '2024-06-20T10:00:00Z',

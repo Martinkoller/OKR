@@ -11,8 +11,10 @@ import {
   DashboardConfig,
   NotificationTargetType,
   BIConfig,
+  ActionPlan,
 } from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
+import { differenceInHours, parseISO } from 'date-fns'
 
 interface UserState {
   isAuthenticated: boolean
@@ -49,6 +51,12 @@ interface UserState {
   markNotificationAsRead: (id: string) => void
   markAlertAsRead: (id: string) => void
   triggerSecurityAlert: (message: string, severity?: Alert['severity']) => void
+  addTaskAlert: (
+    title: string,
+    message: string,
+    link: string,
+    idPrefix?: string,
+  ) => void
   notifyDeletion: (
     entityName: string,
     entityType: 'OKR' | 'KPI',
@@ -87,6 +95,7 @@ interface UserState {
     oldStatus: string,
     isRetroactive: boolean,
   ) => void
+  scanForTaskDeadlines: (actionPlans: ActionPlan[]) => void
 
   // BI Integration
   updateBIConfig: (config: BIConfig) => void
@@ -223,18 +232,39 @@ export const useUserStore = create<UserState>((set, get) => ({
     }))
   },
 
+  addTaskAlert: (title, message, link, idPrefix) => {
+    set((state) => {
+      // Prevent duplicates based on ID prefix if provided
+      if (idPrefix && state.alerts.some((a) => a.id.startsWith(idPrefix))) {
+        return state
+      }
+      return {
+        alerts: [
+          {
+            id: idPrefix
+              ? `${idPrefix}-${Date.now()}`
+              : `task-${Date.now()}-${Math.random()}`,
+            type: 'TASK',
+            title,
+            message,
+            timestamp: new Date().toISOString(),
+            read: false,
+            link,
+          },
+          ...state.alerts,
+        ],
+      }
+    })
+  },
+
   notifyDeletion: (entityName, entityType, performerId, ownerId) => {
     const state = get()
     const performer = state.users.find((u) => u.id === performerId)
     const performerName = performer ? performer.name : 'Sistema'
 
-    // In a real backend, we would query admins and owner and send notifications.
-    // Here we simulate by adding an alert if the current user is relevant.
-    // However, to make it visible to "Administrator" roles and "Responsible" party:
     const currentUser = state.currentUser
     if (!currentUser) return
 
-    // Check if current user is Admin (Director General) or the Owner
     const isAdmin = currentUser.role === 'DIRECTOR_GENERAL'
     const isOwner = currentUser.id === ownerId
 
@@ -403,6 +433,42 @@ export const useUserStore = create<UserState>((set, get) => ({
           }))
         }
       }
+    })
+  },
+
+  scanForTaskDeadlines: (actionPlans: ActionPlan[]) => {
+    const { currentUser } = get()
+    if (!currentUser) return
+
+    const now = new Date()
+
+    actionPlans.forEach((plan) => {
+      // Skip completed or cancelled plans
+      if (plan.status === 'COMPLETED' || plan.status === 'CANCELLED') return
+
+      plan.tasks.forEach((task) => {
+        if (task.status === 'PENDING') {
+          const deadline = parseISO(task.deadline)
+          const hoursRemaining = differenceInHours(deadline, now)
+
+          // Alert if within 48 hours and not overdue (or maybe include overdue)
+          if (hoursRemaining <= 48 && hoursRemaining > 0) {
+            get().addTaskAlert(
+              'Prazo de Tarefa Próximo',
+              `A tarefa "${task.description}" do plano "${plan.title}" vence em menos de 48h.`,
+              `/action-plans`, // Ideal link would open modal, but listing page is safe fallback
+              `deadline-${task.id}`,
+            )
+          } else if (hoursRemaining < 0) {
+            get().addTaskAlert(
+              'Tarefa Atrasada',
+              `A tarefa "${task.description}" do plano "${plan.title}" está atrasada.`,
+              `/action-plans`,
+              `overdue-${task.id}`,
+            )
+          }
+        }
+      })
     })
   },
 

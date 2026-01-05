@@ -35,6 +35,7 @@ import {
   Edit2,
   Trash2,
   Eye,
+  LayoutDashboard,
 } from 'lucide-react'
 import { ActionPlanModal } from '@/components/ActionPlanModal'
 import { ActionPlan } from '@/types'
@@ -43,6 +44,7 @@ import { ptBR } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/usePermissions'
 import { BUFilter } from '@/components/dashboard/BUFilter'
+import { ActionPlanCharts } from '@/components/action-plan/ActionPlanCharts'
 
 export const ActionPlansDashboard = () => {
   const { actionPlans, deleteActionPlan, kpis, okrs } = useDataStore()
@@ -125,14 +127,15 @@ export const ActionPlansDashboard = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Gestão de Planos de Ação
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <LayoutDashboard className="h-6 w-6 text-primary" />
+            Cockpit de Execução
           </h1>
           <p className="text-muted-foreground">
-            Centralize a execução de iniciativas estratégicas.
+            Gestão tática de planos de ação, tarefas e anexos.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -144,6 +147,8 @@ export const ActionPlansDashboard = () => {
           )}
         </div>
       </div>
+
+      <ActionPlanCharts actionPlans={filteredPlans} />
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative flex-1 w-full md:max-w-sm">

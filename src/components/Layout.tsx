@@ -46,16 +46,17 @@ import { useEffect } from 'react'
 
 export default function Layout() {
   const { pathname } = useLocation()
-  const { currentUser, logout } = useUserStore()
-  const { addAuditEntry } = useDataStore()
+  const { currentUser, logout, scanForTaskDeadlines } = useUserStore()
+  const { addAuditEntry, actionPlans } = useDataStore()
   const { checkPermission } = usePermissions()
   const navigate = useNavigate()
 
   useEffect(() => {
     if (currentUser) {
-      // Access log could be here
+      // Trigger scan for deadlines
+      scanForTaskDeadlines(actionPlans)
     }
-  }, [pathname, currentUser, addAuditEntry])
+  }, [currentUser, actionPlans, scanForTaskDeadlines])
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + '/')
@@ -64,7 +65,6 @@ export default function Layout() {
   const canViewOKR = checkPermission('OKR', 'VIEW')
   const canViewKPI = checkPermission('KPI', 'VIEW')
   const canViewReport = checkPermission('REPORT', 'VIEW')
-  // For Action Plans, we generally allow viewing if user can view KPIs/OKRs, but strictly:
   const canViewActionPlans =
     checkPermission('KPI', 'VIEW') || checkPermission('OKR', 'VIEW')
 
