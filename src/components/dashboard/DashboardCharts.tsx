@@ -10,17 +10,25 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis } from 'recharts'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 import { Link } from 'react-router-dom'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Badge } from '@/components/ui/badge'
 import {
-  Tooltip,
+  Tooltip as UITooltip,
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, TrendingUp, AlertTriangle } from 'lucide-react'
 import { KPI, ActionPlan } from '@/types'
+import { ActionPlanSummary } from '@/components/dashboard/ActionPlanSummary'
 
 interface DashboardChartsProps {
   trendData: any[]
@@ -48,105 +56,138 @@ export const DashboardCharts = ({
     .slice(0, 5)
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-      <Card className="col-span-4 shadow-sm">
-        <CardHeader>
-          <CardTitle>Evolução Estratégica</CardTitle>
-          <CardDescription>
-            Progresso médio dos OKRs nos últimos 6 meses
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pl-2">
-          <div className="h-[300px] w-full">
-            <ChartContainer
-              config={{ progress: { label: 'Progresso', color: '#003366' } }}
-            >
-              <BarChart data={trendData}>
-                <XAxis
-                  dataKey="month"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <Bar dataKey="progress" fill="#003366" radius={[4, 4, 0, 0]} />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent />}
-                />
-              </BarChart>
-            </ChartContainer>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Trend Chart */}
+        <Card className="col-span-4 shadow-sm flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Evolução Estratégica
+            </CardTitle>
+            <CardDescription>
+              Progresso médio dos OKRs (Últimos meses)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2 flex-1">
+            <div className="h-[250px] w-full">
+              <ChartContainer
+                config={{ progress: { label: 'Progresso', color: '#003366' } }}
+              >
+                <BarChart data={trendData}>
+                  <XAxis
+                    dataKey="month"
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Bar
+                    dataKey="progress"
+                    fill="#003366"
+                    radius={[4, 4, 0, 0]}
+                    barSize={40}
+                  />
+                  <ChartTooltip
+                    cursor={{ fill: 'transparent' }}
+                    content={<ChartTooltipContent />}
+                  />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card className="col-span-3 shadow-sm">
+        {/* Action Plan Summary Widget */}
+        <div className="col-span-3">
+          <ActionPlanSummary actionPlans={actionPlans} />
+        </div>
+      </div>
+
+      {/* Critical KPIs Row */}
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>KPIs em Alerta</CardTitle>
-          <CardDescription>
-            Indicadores com status Amarelo ou Vermelho
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                KPIs em Alerta
+              </CardTitle>
+              <CardDescription>
+                Indicadores com status Amarelo ou Vermelho que requerem atenção
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="ml-auto">
+              {criticalKpis.length} Críticos
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {criticalKpis.map((kpi) => (
               <div
                 key={kpi.id}
-                className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+                className="flex flex-col gap-2 p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
                     <Link
                       to={`/kpis/${kpi.id}`}
-                      className="text-sm font-medium line-clamp-1 hover:underline hover:text-blue-700"
+                      className="font-semibold text-sm hover:underline hover:text-primary line-clamp-1"
+                      title={kpi.name}
                     >
                       {kpi.name}
                     </Link>
-                    {kpi.weight >= 40 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] px-1 h-5"
-                      >
-                        Alta Prio.
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground">
                       Meta: {kpi.goal} {kpi.unit}
                     </p>
+                  </div>
+                  <StatusBadge status={kpi.status} />
+                </div>
+
+                <div className="mt-auto flex items-center justify-between pt-2">
+                  <span className="text-lg font-bold font-mono">
+                    {kpi.currentValue}{' '}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {kpi.unit}
+                    </span>
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {kpi.weight >= 40 && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        Prioridade Alta
+                      </Badge>
+                    )}
                     {hasActionPlan(kpi.id) && (
-                      <Tooltip>
+                      <UITooltip>
                         <TooltipTrigger asChild>
-                          <ClipboardList className="h-3 w-3 text-blue-500" />
+                          <Badge
+                            variant="outline"
+                            className="h-5 w-5 p-0 flex items-center justify-center border-blue-200 bg-blue-50"
+                          >
+                            <ClipboardList className="h-3 w-3 text-blue-600" />
+                          </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Possui Plano de Ação ativo</p>
+                          <p>Plano de Ação Ativo</p>
                         </TooltipContent>
-                      </Tooltip>
+                      </UITooltip>
                     )}
                   </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <StatusBadge
-                    status={kpi.status}
-                    className="scale-90 origin-right"
-                  />
-                  <span className="text-xs font-mono">
-                    {kpi.currentValue} {kpi.unit}
-                  </span>
                 </div>
               </div>
             ))}
             {criticalKpis.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground text-sm">
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500 opacity-50" />
                 Todos os KPIs estão performando bem!
               </div>
             )}
