@@ -128,6 +128,7 @@ export type AuditEntity =
   | 'BU'
   | 'SYSTEM'
   | 'PAGE'
+  | 'TEMPLATE'
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'ACCESS'
 
 export type AuditEntry = {
@@ -148,15 +149,22 @@ export type TriggerCondition =
   | 'STATUS_CHANGE'
   | 'STATUS_RED'
   | 'RETROACTIVE_EDIT'
+  | 'THRESHOLD' // Added for custom alerts
 export type NotificationChannel = 'PORTAL' | 'EMAIL'
+export type NotificationTargetType = 'KPI' | 'OKR' | 'ALL'
+export type AlertOperator = 'GREATER_THAN' | 'LESS_THAN' | 'EQUALS'
 
 export type NotificationRule = {
   id: string
   userId: string
   name: string
   buId: string | 'ALL'
+  targetType?: NotificationTargetType // 'KPI' | 'OKR' | 'ALL'
   kpiType: 'ALL' | 'QUANT' | 'QUAL'
   triggerCondition: TriggerCondition
+  threshold?: number
+  operator?: AlertOperator
+  targetEntityId?: string // If set, applies only to this specific entity
   channels: NotificationChannel[]
   isActive: boolean
 }
@@ -169,6 +177,7 @@ export interface Template {
   type: TemplateType
   title: string
   description: string
+  formula?: string // Added for advanced templates
   // KPI Specifics
   frequency?: KPIFrequency
   kpiType?: KPIType

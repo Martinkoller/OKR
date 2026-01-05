@@ -40,9 +40,14 @@ interface DataState {
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
   addOKR: (okr: OKR, userId: string) => void
   addKPI: (kpi: KPI, userId: string) => void
+
+  // Template Management
+  addTemplate: (template: Template, userId: string) => void
+  updateTemplate: (template: Template, userId: string) => void
+  deleteTemplate: (templateId: string, userId: string) => void
 }
 
-export const useDataStore = create<DataState>((set) => ({
+export const useDataStore = create<DataState>((set, get) => ({
   okrs: MOCK_OKRS,
   kpis: MOCK_KPIS,
   actionPlans: MOCK_ACTION_PLANS,
@@ -102,7 +107,7 @@ export const useDataStore = create<DataState>((set) => ({
       setTimeout(() => {
         useUserStore
           .getState()
-          .processKPINotification(updatedKPI, oldStatus, !!isRetroactive)
+          .processNotification(updatedKPI, 'KPI', oldStatus, !!isRetroactive)
       }, 0)
 
       return {
@@ -115,20 +120,36 @@ export const useDataStore = create<DataState>((set) => ({
 
   updateOKR: (okr, userId) => {
     set((state) => {
+      const oldOKR = state.okrs.find((o) => o.id === okr.id)
+      const oldProgress = oldOKR?.progress
+      const oldStatus = oldOKR?.status
+
       // Calculate progress and status based on current KPIs (in case kpiIds changed)
       const { progress, status } = calculateOKRProgress(okr, state.kpis)
       const updatedOKR = { ...okr, progress, status }
 
       const newOKRs = state.okrs.map((o) => (o.id === okr.id ? updatedOKR : o))
+
       const auditEntry: AuditEntry = {
         id: Math.random().toString(36).substr(2, 9),
         entityId: okr.id,
         entityType: 'OKR',
         action: 'UPDATE',
+        field: 'progress',
+        oldValue: oldProgress,
+        newValue: progress,
         reason: `Atualização de OKR: ${okr.title}`,
         userId,
         timestamp: new Date().toISOString(),
       }
+
+      // Trigger Notification Engine for OKR
+      setTimeout(() => {
+        useUserStore
+          .getState()
+          .processNotification(updatedOKR, 'OKR', oldStatus || '', false)
+      }, 0)
+
       return {
         okrs: newOKRs,
         auditLogs: [auditEntry, ...state.auditLogs],
@@ -235,4 +256,57 @@ export const useDataStore = create<DataState>((set) => ({
       }
     })
   },
+
+  addTemplate: (template, userId) =>
+    set((state) => {
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: template.id,
+        entityType: 'TEMPLATE',
+        action: 'CREATE',
+        reason: `Modelo criado: ${template.title}`,
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+      return {
+        templates: [...state.templates, template],
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    }),
+
+  updateTemplate: (template, userId) =>
+    set((state) => {
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: template.id,
+        entityType: 'TEMPLATE',
+        action: 'UPDATE',
+        reason: `Modelo atualizado: ${template.title}`,
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+      return {
+        templates: state.templates.map((t) =>
+          t.id === template.id ? template : t,
+        ),
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    }),
+
+  deleteTemplate: (templateId, userId) =>
+    set((state) => {
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: templateId,
+        entityType: 'TEMPLATE',
+        action: 'DELETE',
+        reason: 'Modelo excluído',
+        userId,
+        timestamp: new Date().toISOString(),
+      }
+      return {
+        templates: state.templates.filter((t) => t.id !== templateId),
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    }),
 }))

@@ -3,9 +3,16 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Building, Settings2, ExternalLink } from 'lucide-react'
+import {
+  Building,
+  Settings2,
+  ExternalLink,
+  Library,
+  FileText,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { BUHierarchyManager } from '@/components/settings/BUHierarchyManager'
+import { TemplateManager } from '@/components/templates/TemplateManager'
 
 export const Admin = () => {
   return (
@@ -13,7 +20,7 @@ export const Admin = () => {
       <div>
         <h1 className="text-2xl font-bold">Administração</h1>
         <p className="text-muted-foreground">
-          Gerencie BUs e configurações globais do sistema.
+          Gerencie BUs, modelos e configurações globais do sistema.
         </p>
       </div>
 
@@ -22,6 +29,9 @@ export const Admin = () => {
           <TabsTrigger value="bus" className="gap-2">
             <Building className="h-4 w-4" /> Unidades de Negócio
           </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-2">
+            <Library className="h-4 w-4" /> Modelos
+          </TabsTrigger>
           <TabsTrigger value="system" className="gap-2">
             <Settings2 className="h-4 w-4" /> Parâmetros
           </TabsTrigger>
@@ -29,6 +39,10 @@ export const Admin = () => {
 
         <TabsContent value="bus">
           <BUHierarchyManager />
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <TemplateManager />
         </TabsContent>
 
         <TabsContent value="system">

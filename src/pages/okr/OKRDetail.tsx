@@ -23,10 +23,12 @@ import {
   Unlink,
   Plus,
   Edit,
+  CalendarDays,
+  History,
 } from 'lucide-react'
 import { ActionPlanList } from '@/components/ActionPlanList'
 import { calculateOKRProgressForDate, predictTrend } from '@/lib/kpi-utils'
-import { format, subMonths, parseISO, addMonths } from 'date-fns'
+import { format, subMonths, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   LineChart,
@@ -50,10 +52,12 @@ import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
 import { useState } from 'react'
 import { OKRFormDialog } from '@/components/okr/OKRFormDialog'
 import { usePermissions } from '@/hooks/usePermissions'
+import { downloadICS } from '@/lib/calendar-utils'
+import { AuditLogTimeline } from '@/components/AuditLogTimeline'
 
 export const OKRDetail = () => {
   const { id } = useParams()
-  const { okrs, kpis, updateOKR } = useDataStore()
+  const { okrs, kpis, updateOKR, auditLogs } = useDataStore()
   const { users, bus, currentUser } = useUserStore()
   const { toast } = useToast()
   const { canEdit } = usePermissions()
@@ -62,6 +66,7 @@ export const OKRDetail = () => {
   const [isEditOKROpen, setIsEditOKROpen] = useState(false)
 
   const okr = okrs.find((o) => o.id === id)
+  const okrLogs = auditLogs.filter((l) => l.entityId === id)
 
   if (!okr) {
     return <div className="p-8 text-center">OKR não encontrado.</div>
@@ -94,6 +99,21 @@ export const OKRDetail = () => {
     const updatedOKR = { ...okr, kpiIds: newKpiIds }
     updateOKR(updatedOKR, currentUser.id)
     setIsKPIFormOpen(false)
+  }
+
+  const handleAddToCalendar = () => {
+    // Assuming end of year as deadline for OKR
+    const deadline = new Date(okr.endYear, 11, 31, 17, 0, 0)
+    downloadICS(
+      `Prazo OKR: ${okr.title}`,
+      `Entrega final do Objetivo Estratégico.\n\nDescrição: ${okr.description}`,
+      deadline,
+      window.location.href,
+    )
+    toast({
+      title: 'Evento baixado',
+      description: 'Adicione ao seu calendário.',
+    })
   }
 
   // Simulate/Calculate History for the last 6 months
@@ -161,15 +181,20 @@ export const OKRDetail = () => {
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para OKRs
           </Link>
         </Button>
-        {canManage && (
-          <Button
-            variant="outline"
-            onClick={() => setIsEditOKROpen(true)}
-            className="no-print"
-          >
-            <Edit className="mr-2 h-4 w-4" /> Editar OKR
+        <div className="flex gap-2 no-print">
+          <Button variant="outline" onClick={handleAddToCalendar}>
+            <CalendarDays className="mr-2 h-4 w-4" /> Adicionar ao Calendário
           </Button>
-        )}
+          {canManage && (
+            <Button
+              variant="outline"
+              onClick={() => setIsEditOKROpen(true)}
+              className="no-print"
+            >
+              <Edit className="mr-2 h-4 w-4" /> Editar OKR
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -425,6 +450,19 @@ export const OKRDetail = () => {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Change History */}
+          <Card className="page-break">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Histórico de Auditoria</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <AuditLogTimeline logs={okrLogs} className="h-[400px]" />
             </CardContent>
           </Card>
         </div>

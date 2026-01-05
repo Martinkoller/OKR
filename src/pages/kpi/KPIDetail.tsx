@@ -20,6 +20,7 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
+  CalendarDays,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
@@ -59,6 +60,7 @@ import {
 import { predictTrend, calculateStatus } from '@/lib/kpi-utils'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { downloadICS } from '@/lib/calendar-utils'
 
 export const KPIDetail = () => {
   const { id } = useParams()
@@ -163,6 +165,31 @@ export const KPIDetail = () => {
     setIsDialogOpen(false)
   }
 
+  const handleAddToCalendar = () => {
+    // For KPI, we might use next update date or end of month
+    // Let's assume end of current month
+    const today = new Date()
+    const deadline = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      17,
+      0,
+      0,
+    )
+
+    downloadICS(
+      `Atualização KPI: ${kpi.name}`,
+      `Lembrete de atualização mensal do indicador.\n\nMeta: ${kpi.goal} ${kpi.unit}`,
+      deadline,
+      window.location.href,
+    )
+    toast({
+      title: 'Evento baixado',
+      description: 'Adicione ao seu calendário.',
+    })
+  }
+
   // Get next estimated value
   const nextEstimate = forecastData.length > 1 ? forecastData[1].forecast : null
   const estimatedStatus =
@@ -170,11 +197,20 @@ export const KPIDetail = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <Button variant="ghost" asChild className="pl-0 no-print">
-        <Link to="/kpis">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para KPIs
-        </Link>
-      </Button>
+      <div className="flex justify-between items-center">
+        <Button variant="ghost" asChild className="pl-0 no-print">
+          <Link to="/kpis">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para KPIs
+          </Link>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleAddToCalendar}
+          className="no-print"
+        >
+          <CalendarDays className="mr-2 h-4 w-4" /> Adicionar ao Calendário
+        </Button>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">

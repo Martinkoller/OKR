@@ -4,10 +4,12 @@ import {
   BU,
   NotificationRule,
   KPI,
+  OKR,
   RoleDefinition,
   Group,
   Alert,
   DashboardConfig,
+  NotificationTargetType,
 } from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 
@@ -71,8 +73,9 @@ interface UserState {
   addRule: (rule: NotificationRule) => void
   updateRule: (rule: NotificationRule) => void
   deleteRule: (ruleId: string) => void
-  processKPINotification: (
-    kpi: KPI,
+  processNotification: (
+    entity: KPI | OKR,
+    entityType: 'KPI' | 'OKR',
     oldStatus: string,
     isRetroactive: boolean,
   ) => void
@@ -88,6 +91,7 @@ const MOCK_RULES: NotificationRule[] = [
     userId: 'u-1',
     name: 'Alerta Crítico Global',
     buId: 'ALL',
+    targetType: 'ALL',
     kpiType: 'ALL',
     triggerCondition: 'STATUS_RED',
     channels: ['PORTAL', 'EMAIL'],
@@ -266,29 +270,41 @@ export const useUserStore = create<UserState>((set, get) => ({
       notificationRules: state.notificationRules.filter((r) => r.id !== ruleId),
     })),
 
-  processKPINotification: (kpi, oldStatus, isRetroactive) => {
+  processNotification: (entity, entityType, oldStatus, isRetroactive) => {
     const state = get()
 
-    // Find matching rules
     state.notificationRules.forEach((rule) => {
-      // Check BU Scope
-      if (rule.buId !== 'ALL' && rule.buId !== kpi.buId) return
+      // 1. Check BU Scope
+      if (rule.buId !== 'ALL' && rule.buId !== entity.buId) return
 
-      // Check KPI Type
-      if (rule.kpiType !== 'ALL' && rule.kpiType !== kpi.type) return
+      // 2. Check Target Type (OKR/KPI)
+      if (rule.targetType && rule.targetType !== 'ALL') {
+        if (rule.targetType !== entityType) return
+      }
+
+      // 3. Check specific Entity ID (Custom Alert)
+      if (rule.targetEntityId && rule.targetEntityId !== entity.id) return
+
+      // 4. Check KPI Type (only for KPIs)
+      if (
+        entityType === 'KPI' &&
+        rule.kpiType !== 'ALL' &&
+        rule.kpiType !== (entity as KPI).type
+      )
+        return
 
       let shouldTrigger = false
 
-      // Check Trigger
+      // 5. Evaluate Trigger Conditions
       if (
         rule.triggerCondition === 'STATUS_RED' &&
-        kpi.status === 'RED' &&
+        entity.status === 'RED' &&
         oldStatus !== 'RED'
       ) {
         shouldTrigger = true
       } else if (
         rule.triggerCondition === 'STATUS_CHANGE' &&
-        kpi.status !== oldStatus
+        entity.status !== oldStatus
       ) {
         shouldTrigger = true
       } else if (
@@ -296,24 +312,54 @@ export const useUserStore = create<UserState>((set, get) => ({
         isRetroactive
       ) {
         shouldTrigger = true
+      } else if (rule.triggerCondition === 'THRESHOLD') {
+        const currentValue =
+          entityType === 'KPI'
+            ? (entity as KPI).currentValue
+            : (entity as OKR).progress
+        if (rule.threshold !== undefined && rule.operator) {
+          if (rule.operator === 'GREATER_THAN' && currentValue > rule.threshold)
+            shouldTrigger = true
+          if (rule.operator === 'LESS_THAN' && currentValue < rule.threshold)
+            shouldTrigger = true
+          if (rule.operator === 'EQUALS' && currentValue === rule.threshold)
+            shouldTrigger = true
+        }
       }
 
-      if (shouldTrigger && rule.channels.includes('PORTAL')) {
-        // Create Alert
-        set((s) => ({
-          alerts: [
-            {
-              id: `alert-${Date.now()}-${Math.random()}`,
-              type: 'PERFORMANCE',
-              title: `Alerta de Performance: ${kpi.name}`,
-              message: `O KPI ${kpi.name} disparou a regra "${rule.name}". Novo Status: ${kpi.status}`,
-              timestamp: new Date().toISOString(),
-              read: false,
-              link: `/kpis/${kpi.id}`,
-            },
-            ...s.alerts,
-          ],
-        }))
+      if (shouldTrigger) {
+        // Determine recipient (Owner or Rule Creator)
+        // Ideally should alert the owner AND the rule creator
+        // For now, simpler implementation: Alert the current user via alert list?
+        // No, typically notifications go to specific users.
+        // We will add alert to the store list which is global for now (needs user filtering in real app)
+        // We will assume alerts are visible to everyone or filtered by receiver in backend.
+        // Here we simulate alert for the current user if they are the owner or rule creator.
+
+        const alertMessage =
+          rule.triggerCondition === 'THRESHOLD'
+            ? `O ${entityType} "${'title' in entity ? entity.title : entity.name}" ultrapassou o limite definido: ${rule.operator} ${rule.threshold}`
+            : `O ${entityType} "${'title' in entity ? entity.title : entity.name}" disparou a regra "${rule.name}". Novo Status: ${entity.status}`
+
+        if (rule.channels.includes('PORTAL')) {
+          set((s) => ({
+            alerts: [
+              {
+                id: `alert-${Date.now()}-${Math.random()}`,
+                type: 'PERFORMANCE',
+                title: `Alerta: ${'title' in entity ? entity.title : entity.name}`,
+                message: alertMessage,
+                timestamp: new Date().toISOString(),
+                read: false,
+                link:
+                  entityType === 'KPI'
+                    ? `/kpis/${entity.id}`
+                    : `/okrs/${entity.id}`,
+              },
+              ...s.alerts,
+            ],
+          }))
+        }
       }
     })
   },
