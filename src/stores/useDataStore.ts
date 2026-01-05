@@ -17,6 +17,7 @@ import {
 } from '@/data/mockData'
 import { calculateStatus, calculateOKRProgress } from '@/lib/kpi-utils'
 import { useUserStore } from '@/stores/useUserStore'
+import { isSameDay, parseISO } from 'date-fns'
 
 interface DataState {
   okrs: OKR[]
@@ -32,6 +33,13 @@ interface DataState {
     comment?: string,
     isRetroactive?: boolean,
     reason?: string,
+    referenceDate?: string, // New parameter
+  ) => void
+
+  deleteKPIMeasurement: (
+    kpiId: string,
+    timestamp: string, // Identifier for the history entry
+    userId: string,
   ) => void
 
   updateOKR: (okr: OKR, userId: string) => void
@@ -40,6 +48,10 @@ interface DataState {
   addAuditEntry: (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => void
   addOKR: (okr: OKR, userId: string) => void
   addKPI: (kpi: KPI, userId: string) => void
+
+  // Deletion Actions
+  deleteOKR: (okrId: string, userId: string) => void
+  deleteKPI: (kpiId: string, userId: string) => void
 
   // Template Management
   addTemplate: (template: Template, userId: string) => void
@@ -54,29 +66,63 @@ export const useDataStore = create<DataState>((set, get) => ({
   auditLogs: MOCK_AUDIT_LOGS,
   templates: MOCK_TEMPLATES,
 
-  updateKPI: (kpiId, value, userId, comment, isRetroactive, reason) => {
+  updateKPI: (
+    kpiId,
+    value,
+    userId,
+    comment,
+    isRetroactive,
+    reason,
+    referenceDate,
+  ) => {
     set((state) => {
       const kpiIndex = state.kpis.findIndex((k) => k.id === kpiId)
       if (kpiIndex === -1) return state
 
       const oldKPI = state.kpis[kpiIndex]
       const oldStatus = oldKPI.status
-      const newStatus = calculateStatus(value, oldKPI.goal)
+
+      const entryDate = referenceDate || new Date().toISOString()
 
       const newHistoryEntry: KPIHistoryEntry = {
-        date: new Date().toISOString(),
+        date: entryDate,
         value,
         comment,
         updatedByUserId: userId,
         timestamp: new Date().toISOString(),
       }
 
+      // Merge history: if entry exists for same day, replace it (upsert)
+      let newHistory = [...oldKPI.history]
+      const existingEntryIndex = newHistory.findIndex((h) =>
+        isSameDay(parseISO(h.date), parseISO(entryDate)),
+      )
+
+      if (existingEntryIndex >= 0) {
+        newHistory[existingEntryIndex] = {
+          ...newHistoryEntry,
+          // Keep original timestamp if updating? No, update timestamp to now
+          timestamp: new Date().toISOString(),
+        }
+      } else {
+        newHistory.push(newHistoryEntry)
+      }
+
+      // Sort history to find latest
+      newHistory.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      )
+
+      const latestEntry = newHistory[newHistory.length - 1]
+      const newValue = latestEntry.value
+      const newStatus = calculateStatus(newValue, oldKPI.goal)
+
       const updatedKPI = {
         ...oldKPI,
-        currentValue: value,
+        currentValue: newValue,
         status: newStatus,
         lastUpdated: new Date().toISOString(),
-        history: [...oldKPI.history, newHistoryEntry],
+        history: newHistory,
       }
 
       const newKPIs = [...state.kpis]
@@ -89,10 +135,13 @@ export const useDataStore = create<DataState>((set, get) => ({
         action: 'UPDATE',
         field: 'value',
         oldValue: oldKPI.currentValue,
-        newValue: value,
+        newValue: newValue,
         reason: isRetroactive ? reason : comment || 'Atualização de valor',
         userId,
         timestamp: new Date().toISOString(),
+        details: referenceDate
+          ? `Data de Referência: ${referenceDate}`
+          : undefined,
       }
 
       const newOKRs = state.okrs.map((okr) => {
@@ -109,6 +158,76 @@ export const useDataStore = create<DataState>((set, get) => ({
           .getState()
           .processNotification(updatedKPI, 'KPI', oldStatus, !!isRetroactive)
       }, 0)
+
+      return {
+        kpis: newKPIs,
+        okrs: newOKRs,
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  deleteKPIMeasurement: (kpiId, timestamp, userId) => {
+    set((state) => {
+      const kpiIndex = state.kpis.findIndex((k) => k.id === kpiId)
+      if (kpiIndex === -1) return state
+
+      const oldKPI = state.kpis[kpiIndex]
+
+      // Find the entry to delete for audit log
+      const entryToDelete = oldKPI.history.find(
+        (h) => h.timestamp === timestamp,
+      )
+      if (!entryToDelete) return state
+
+      // Filter out
+      const newHistory = oldKPI.history.filter((h) => h.timestamp !== timestamp)
+
+      // Recalculate state
+      let newValue = 0
+      let newStatus: KPIStatus = 'RED'
+
+      if (newHistory.length > 0) {
+        newHistory.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        )
+        const latest = newHistory[newHistory.length - 1]
+        newValue = latest.value
+        newStatus = calculateStatus(newValue, oldKPI.goal)
+      }
+
+      const updatedKPI = {
+        ...oldKPI,
+        currentValue: newValue,
+        status: newStatus,
+        history: newHistory,
+        lastUpdated: new Date().toISOString(),
+      }
+
+      const newKPIs = [...state.kpis]
+      newKPIs[kpiIndex] = updatedKPI
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: kpiId,
+        entityType: 'KPI',
+        action: 'DELETE',
+        field: 'history',
+        oldValue: entryToDelete.value,
+        newValue: 'DELETED',
+        reason: 'Remoção de medição',
+        userId,
+        timestamp: new Date().toISOString(),
+        details: `Medição de ${entryToDelete.date} removida.`,
+      }
+
+      const newOKRs = state.okrs.map((okr) => {
+        if (okr.kpiIds.includes(kpiId)) {
+          const { progress, status } = calculateOKRProgress(okr, newKPIs)
+          return { ...okr, progress, status }
+        }
+        return okr
+      })
 
       return {
         kpis: newKPIs,
@@ -238,6 +357,29 @@ export const useDataStore = create<DataState>((set, get) => ({
     })
   },
 
+  deleteOKR: (okrId, userId) => {
+    set((state) => {
+      const okrToDelete = state.okrs.find((o) => o.id === okrId)
+      if (!okrToDelete) return state
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: okrId,
+        entityType: 'OKR',
+        action: 'DELETE',
+        reason: `Exclusão de OKR: ${okrToDelete.title}`,
+        userId,
+        timestamp: new Date().toISOString(),
+        details: 'OKR removido (Soft Delete)',
+      }
+
+      return {
+        okrs: state.okrs.filter((o) => o.id !== okrId),
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
   addKPI: (kpi, userId) => {
     set((state) => {
       const auditEntry: AuditEntry = {
@@ -252,6 +394,45 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       return {
         kpis: [...state.kpis, kpi],
+        auditLogs: [auditEntry, ...state.auditLogs],
+      }
+    })
+  },
+
+  deleteKPI: (kpiId, userId) => {
+    set((state) => {
+      const kpiToDelete = state.kpis.find((k) => k.id === kpiId)
+      if (!kpiToDelete) return state
+
+      const auditEntry: AuditEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        entityId: kpiId,
+        entityType: 'KPI',
+        action: 'DELETE',
+        reason: `Exclusão de KPI: ${kpiToDelete.name}`,
+        userId,
+        timestamp: new Date().toISOString(),
+        details: 'KPI removido (Soft Delete)',
+      }
+
+      // Also need to remove this KPI from any OKR linking to it
+      const newOKRs = state.okrs.map((okr) => {
+        if (okr.kpiIds.includes(kpiId)) {
+          const newKpiIds = okr.kpiIds.filter((id) => id !== kpiId)
+          // Need to recalculate progress without this KPI
+          const remainingKPIs = state.kpis.filter((k) => k.id !== kpiId) // Temporarily filter out
+          const { progress, status } = calculateOKRProgress(
+            { ...okr, kpiIds: newKpiIds },
+            remainingKPIs,
+          )
+          return { ...okr, kpiIds: newKpiIds, progress, status }
+        }
+        return okr
+      })
+
+      return {
+        kpis: state.kpis.filter((k) => k.id !== kpiId),
+        okrs: newOKRs,
         auditLogs: [auditEntry, ...state.auditLogs],
       }
     })

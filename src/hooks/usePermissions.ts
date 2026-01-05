@@ -10,6 +10,14 @@ export const usePermissions = () => {
   ): boolean => {
     if (!currentUser) return false
 
+    // 0. Check User Specific Overrides (Extra Permissions)
+    if (
+      currentUser.extraPermissions &&
+      currentUser.extraPermissions[module]?.includes(action)
+    ) {
+      return true
+    }
+
     // 1. Gather all role IDs applicable to the user
     const applicableRoleIds = new Set<string>()
 

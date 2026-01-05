@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useDataStore } from '@/stores/useDataStore'
 import { useUserStore } from '@/stores/useUserStore'
 import {
@@ -21,6 +21,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   CalendarDays,
+  List,
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
@@ -61,11 +63,25 @@ import { predictTrend, calculateStatus } from '@/lib/kpi-utils'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { downloadICS } from '@/lib/calendar-utils'
+import { KPIHistoryDialog } from '@/components/kpi/KPIHistoryDialog'
+import { usePermissions } from '@/hooks/usePermissions'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export const KPIDetail = () => {
   const { id } = useParams()
-  const { kpis, updateKPI, auditLogs } = useDataStore()
+  const navigate = useNavigate()
+  const { kpis, updateKPI, deleteKPI, auditLogs } = useDataStore()
   const { currentUser, addNotification } = useUserStore()
+  const { canDelete } = usePermissions()
   const { toast } = useToast()
 
   const kpi = kpis.find((k) => k.id === id)
@@ -73,7 +89,12 @@ export const KPIDetail = () => {
 
   const [newValue, setNewValue] = useState<string>('')
   const [justification, setJustification] = useState('')
+  const [referenceDate, setReferenceDate] = useState<string>(
+    new Date().toISOString().split('T')[0],
+  )
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   if (!kpi) {
     return <div className="p-8 text-center">KPI não encontrado.</div>
@@ -115,13 +136,8 @@ export const KPIDetail = () => {
   let combinedData: any[] = [...actualData]
 
   if (forecastData.length > 0) {
-    // The first forecast point is the same date as last actual.
-    // We update the last actual data point to include 'forecast' value equal to 'value'
-    // so the forecast line connects there.
     const lastActualIndex = combinedData.length - 1
     combinedData[lastActualIndex].forecast = combinedData[lastActualIndex].value
-
-    // Append the rest of forecast points (skipping the first one which was the anchor)
     combinedData = [...combinedData, ...forecastData.slice(1)]
   }
 
@@ -147,7 +163,15 @@ export const KPIDetail = () => {
     }
 
     if (!currentUser) return
-    updateKPI(kpi.id, val, currentUser.id, justification)
+    updateKPI(
+      kpi.id,
+      val,
+      currentUser.id,
+      justification,
+      false,
+      undefined,
+      referenceDate,
+    )
 
     if (potentialStatus === 'RED') {
       addNotification(
@@ -162,12 +186,22 @@ export const KPIDetail = () => {
     })
     setNewValue('')
     setJustification('')
+    // Reset date to today for next input
+    setReferenceDate(new Date().toISOString().split('T')[0])
     setIsDialogOpen(false)
   }
 
+  const handleDeleteKPI = () => {
+    if (!currentUser) return
+    deleteKPI(kpi.id, currentUser.id)
+    toast({
+      title: 'KPI Excluído',
+      description: 'O indicador foi removido com sucesso.',
+    })
+    navigate('/kpis')
+  }
+
   const handleAddToCalendar = () => {
-    // For KPI, we might use next update date or end of month
-    // Let's assume end of current month
     const today = new Date()
     const deadline = new Date(
       today.getFullYear(),
@@ -190,7 +224,6 @@ export const KPIDetail = () => {
     })
   }
 
-  // Get next estimated value
   const nextEstimate = forecastData.length > 1 ? forecastData[1].forecast : null
   const estimatedStatus =
     nextEstimate !== null ? calculateStatus(nextEstimate, kpi.goal) : null
@@ -203,13 +236,20 @@ export const KPIDetail = () => {
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para KPIs
           </Link>
         </Button>
-        <Button
-          variant="outline"
-          onClick={handleAddToCalendar}
-          className="no-print"
-        >
-          <CalendarDays className="mr-2 h-4 w-4" /> Adicionar ao Calendário
-        </Button>
+        <div className="flex gap-2 no-print">
+          <Button variant="outline" onClick={handleAddToCalendar}>
+            <CalendarDays className="mr-2 h-4 w-4" /> Adicionar ao Calendário
+          </Button>
+          {canDelete('KPI') && (
+            <Button
+              variant="outline"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Excluir KPI
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -234,6 +274,17 @@ export const KPIDetail = () => {
               </div>
             </CardHeader>
             <CardContent>
+              <div className="flex justify-end mb-2 no-print">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="text-xs text-muted-foreground"
+                >
+                  <List className="mr-2 h-4 w-4" /> Ver Histórico Detalhado
+                </Button>
+              </div>
+
               <div className="h-[300px] w-full mb-6">
                 <ChartContainer
                   config={{
@@ -363,6 +414,17 @@ export const KPIDetail = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
+                      <Label htmlFor="date">Data de Referência</Label>
+                    </div>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={referenceDate}
+                      onChange={(e) => setReferenceDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
                       <Label htmlFor="value">Novo Valor</Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -385,7 +447,7 @@ export const KPIDetail = () => {
                       onChange={(e) => setNewValue(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:col-span-2">
                     <div className="flex items-center gap-2">
                       <Label htmlFor="justification">
                         Justificativa / Comentário
@@ -477,7 +539,8 @@ export const KPIDetail = () => {
             <DialogTitle>Confirmar Atualização</DialogTitle>
             <DialogDescription>
               Você está prestes a atualizar o KPI <strong>{kpi.name}</strong>{' '}
-              para o valor <strong>{newValue}</strong>.
+              para o valor <strong>{newValue}</strong> na data de referência{' '}
+              <strong>{format(parseISO(referenceDate), 'dd/MM/yyyy')}</strong>.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -488,6 +551,37 @@ export const KPIDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <KPIHistoryDialog
+        kpi={kpi}
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+      />
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir KPI?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá o KPI <strong>{kpi.name}</strong> e todos os
+              seus dados. O histórico completo permanecerá disponível apenas nos
+              relatórios de auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteKPI}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir KPI
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

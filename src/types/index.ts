@@ -18,6 +18,9 @@ export type Group = {
   updatedAt: string
 }
 
+export type PermissionModule = 'OKR' | 'KPI' | 'REPORT' | 'SETTINGS'
+export type PermissionAction = 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'EXPORT'
+
 export type User = {
   id: string
   name: string
@@ -28,10 +31,8 @@ export type User = {
   groupIds?: string[] // User can belong to multiple Access Groups
   avatarUrl?: string
   active: boolean
+  extraPermissions?: Partial<Record<PermissionModule, PermissionAction[]>> // Granular overrides
 }
-
-export type PermissionModule = 'OKR' | 'KPI' | 'REPORT' | 'SETTINGS'
-export type PermissionAction = 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'EXPORT'
 
 export type RoleDefinition = {
   id: string
@@ -47,11 +48,11 @@ export type KPIStatus = 'GREEN' | 'YELLOW' | 'RED'
 export type KPITrend = 'UP' | 'DOWN' | 'STABLE'
 
 export type KPIHistoryEntry = {
-  date: string // ISO Date
+  date: string // ISO Date Reference
   value: number
   comment?: string
   updatedByUserId: string
-  timestamp: string
+  timestamp: string // Creation Timestamp
 }
 
 export type KPI = {
