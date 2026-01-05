@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FileEdit, Plus, Trash2 } from 'lucide-react'
+import { useUserStore } from '@/stores/useUserStore'
 
 interface AuditLogTimelineProps {
   logs: AuditEntry[]
@@ -14,12 +15,18 @@ export const AuditLogTimeline = ({
   logs,
   className,
 }: AuditLogTimelineProps) => {
+  const { users } = useUserStore()
+
   if (logs.length === 0) {
     return (
       <div className="text-sm text-muted-foreground text-center py-8">
         Nenhum registro de auditoria encontrado.
       </div>
     )
+  }
+
+  const getUserName = (userId: string) => {
+    return users.find((u) => u.id === userId)?.name || userId
   }
 
   return (
@@ -92,8 +99,8 @@ export const AuditLogTimeline = ({
                   />
                   <AvatarFallback>U</AvatarFallback>
                 </Avatar>
-                <span className="text-xs text-muted-foreground">
-                  Usuário ID: {log.userId}
+                <span className="text-xs font-medium text-gray-700">
+                  {getUserName(log.userId)}
                 </span>
               </div>
             </div>

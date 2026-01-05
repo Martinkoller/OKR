@@ -26,11 +26,12 @@ import {
 } from '@/types'
 import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
-import { Plus, Trash2, Calendar as CalendarIcon } from 'lucide-react'
+import { Plus, Trash2, Calendar as CalendarIcon, Link2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { KPISelector } from '@/components/okr/KPISelector'
+import { OKRSelector } from '@/components/okr/OKRSelector'
 
 interface ActionPlanModalProps {
   isOpen: boolean
@@ -66,6 +67,7 @@ export const ActionPlanModal = ({
   )
   const [selectedEntityId, setSelectedEntityId] = useState<string>(entityId)
   const [linkedKpiIds, setLinkedKpiIds] = useState<string[]>([])
+  const [linkedOkrIds, setLinkedOkrIds] = useState<string[]>([])
 
   useEffect(() => {
     if (existingPlan) {
@@ -77,6 +79,7 @@ export const ActionPlanModal = ({
       setSelectedEntityId(existingPlan.entityId)
       setSelectedEntityType(existingPlan.entityType)
       setLinkedKpiIds(existingPlan.linkedKpiIds || [])
+      setLinkedOkrIds(existingPlan.linkedOkrIds || [])
     } else {
       setTitle('')
       setDescription('')
@@ -92,6 +95,7 @@ export const ActionPlanModal = ({
       }
       setSelectedEntityType(entityType)
       setLinkedKpiIds([])
+      setLinkedOkrIds([])
     }
   }, [existingPlan, isOpen, entityId, entityType, allowEntitySelection])
 
@@ -142,6 +146,7 @@ export const ActionPlanModal = ({
       createdAt: existingPlan?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       linkedKpiIds: linkedKpiIds.length > 0 ? linkedKpiIds : undefined,
+      linkedOkrIds: linkedOkrIds.length > 0 ? linkedOkrIds : undefined,
     }
 
     saveActionPlan(plan, currentUser?.id || 'system')
@@ -228,7 +233,7 @@ export const ActionPlanModal = ({
               <div className="space-y-4 border p-4 rounded-md bg-muted/20">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Tipo de Vínculo</Label>
+                    <Label>Tipo de Vínculo (Principal)</Label>
                     <Select
                       value={selectedEntityType}
                       onValueChange={(val: 'KPI' | 'OKR') => {
@@ -270,20 +275,34 @@ export const ActionPlanModal = ({
                     </Select>
                   </div>
                 </div>
-
-                {selectedEntityType === 'KPI' && (
-                  <div className="space-y-2">
-                    <Label>Outros KPIs Vinculados (Opcional)</Label>
-                    <KPISelector
-                      selectedKpiIds={linkedKpiIds}
-                      onSelectionChange={setLinkedKpiIds}
-                    />
-                  </div>
-                )}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Link2 className="h-4 w-4" /> Conexões Estratégicas
+              </h4>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Vincular OKRs Relacionados</Label>
+                  <OKRSelector
+                    selectedOkrIds={linkedOkrIds}
+                    onSelectionChange={setLinkedOkrIds}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Vincular KPIs Relacionados</Label>
+                  <KPISelector
+                    selectedKpiIds={linkedKpiIds}
+                    onSelectionChange={setLinkedKpiIds}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
               <div className="space-y-2">
                 <Label htmlFor="dueDate">Data Alvo</Label>
                 <Input

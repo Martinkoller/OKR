@@ -17,6 +17,7 @@ import {
   Edit2,
   Calendar,
   CheckCircle2,
+  Link2,
 } from 'lucide-react'
 import { ActionPlanModal } from './ActionPlanModal'
 import { ActionPlan } from '@/types'
@@ -39,12 +40,22 @@ export const ActionPlanList = ({
     undefined,
   )
 
-  const plans = actionPlans.filter((p) => p.entityId === entityId)
+  const plans = actionPlans.filter((p) => {
+    // 1. Is this entity the primary target?
+    if (p.entityId === entityId) return true
+
+    // 2. Is this entity linked secondarily?
+    if (entityType === 'OKR' && p.linkedOkrIds?.includes(entityId)) return true
+    if (entityType === 'KPI' && p.linkedKpiIds?.includes(entityId)) return true
+
+    return false
+  })
 
   const canEdit =
     currentUser?.role === 'GPM' ||
     currentUser?.role === 'PM' ||
-    currentUser?.role === 'DIRECTOR_BU'
+    currentUser?.role === 'DIRECTOR_BU' ||
+    currentUser?.role === 'DIRECTOR_GENERAL'
 
   const handleEdit = (plan: ActionPlan) => {
     setSelectedPlan(plan)
@@ -76,7 +87,7 @@ export const ActionPlanList = ({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <ClipboardList className="h-5 w-5 text-blue-600" />
-          Planos de Ação
+          Planos de Ação e Iniciativas
         </h3>
         {canEdit && (
           <Button size="sm" onClick={handleCreate}>
@@ -102,8 +113,10 @@ export const ActionPlanList = ({
             const progress =
               totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
+            const isIndirectLink = plan.entityId !== entityId
+
             return (
-              <Card key={plan.id} className="relative overflow-hidden">
+              <Card key={plan.id} className="relative overflow-hidden group">
                 <div
                   className={`absolute left-0 top-0 bottom-0 w-1 ${
                     plan.status === 'COMPLETED' ? 'bg-green-500' : 'bg-blue-500'
@@ -112,9 +125,19 @@ export const ActionPlanList = ({
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-base font-semibold">
-                        {plan.title}
-                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base font-semibold">
+                          {plan.title}
+                        </CardTitle>
+                        {isIndirectLink && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-muted/50 border-dashed gap-1 text-muted-foreground"
+                          >
+                            <Link2 className="h-3 w-3" /> Vinculado
+                          </Badge>
+                        )}
+                      </div>
                       <CardDescription className="line-clamp-2 mt-1">
                         {plan.description}
                       </CardDescription>
@@ -145,7 +168,7 @@ export const ActionPlanList = ({
                     </div>
                     <Progress value={progress} className="h-2" />
                     {canEdit && (
-                      <div className="flex justify-end pt-2">
+                      <div className="flex justify-end pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
                           size="sm"

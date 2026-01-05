@@ -20,258 +20,356 @@ import {
   Workflow,
   FileBarChart,
   History,
+  Target,
+  BarChart3,
+  HelpCircle,
+  LayoutDashboard,
 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function Documentation() {
   return (
     <div className="space-y-8 animate-fade-in max-w-5xl mx-auto pb-10">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Documentação do Sistema
+          Manual do Sistema (StratManager)
         </h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          Guia de referência sobre cálculos, governança e uso do portal
-          estratégico.
+          Guia completo de uso, conceitos estratégicos e governança da
+          plataforma by MarteckConsultoria.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-[#003366]">
-              <FileBarChart className="h-6 w-6" />
-              <CardTitle>Construtor de Relatórios</CardTitle>
-            </div>
-            <CardDescription>
-              Guia de uso para geração de relatórios personalizados.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-gray-600">
-            <p>
-              O novo módulo de relatórios permite criar visões customizadas
-              combinando múltiplas BUs e métricas.
-            </p>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>
-                <strong>Filtros de Contexto:</strong> Selecione a unidade de
-                negócio desejada ou "Visão Global" para dados consolidados.
-              </li>
-              <li>
-                <strong>Seleção de Métricas:</strong> Marque manualmente quais
-                OKRs e KPIs deseja incluir no documento final.
-              </li>
-              <li>
-                <strong>Exportação:</strong> Use o botão "Exportar" para gerar
-                um arquivo <strong>PDF</strong> (ideal para apresentações) ou{' '}
-                <strong>CSV</strong> (para análise de dados crua).
-              </li>
-            </ol>
-            <div className="bg-muted p-3 rounded text-xs mt-2">
-              Dica: O preview do relatório é atualizado em tempo real conforme
-              você seleciona as métricas.
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="modules" className="space-y-6">
+        <TabsList className="w-full justify-start h-auto flex-wrap p-2 gap-2">
+          <TabsTrigger value="modules" className="gap-2">
+            <LayoutDashboard className="h-4 w-4" /> Módulos Principais
+          </TabsTrigger>
+          <TabsTrigger value="okr" className="gap-2">
+            <Target className="h-4 w-4" /> Gestão de OKRs
+          </TabsTrigger>
+          <TabsTrigger value="kpi" className="gap-2">
+            <BarChart3 className="h-4 w-4" /> KPIs e Métricas
+          </TabsTrigger>
+          <TabsTrigger value="action-plans" className="gap-2">
+            <Workflow className="h-4 w-4" /> Planos de Ação
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2">
+            <History className="h-4 w-4" /> Auditoria & Governança
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-[#003366]">
-              <History className="h-6 w-6" />
-              <CardTitle>Sistema de Auditoria</CardTitle>
-            </div>
-            <CardDescription>
-              Rastreabilidade completa de ações e acessos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-gray-600">
-            <p>
-              Todas as operações críticas são registradas para garantir a
-              integridade dos dados.
-            </p>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>
-                <strong>Registro de Acesso:</strong> Logins e acessos ao sistema
-                são monitorados com timestamp.
-              </li>
-              <li>
-                <strong>Modificações de Dados:</strong> Alterações em valores de
-                KPIs, Metas ou Status de Planos geram logs com "Valor Anterior"
-                e "Novo Valor".
-              </li>
-              <li>
-                <strong>Filtros Avançados:</strong> Administradores podem
-                filtrar logs por Usuário, Unidade de Negócio (BU), Tipo de Ação
-                e Intervalo de Datas.
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-[#003366]">
-              <Calculator className="h-6 w-6" />
-              <CardTitle>Cálculo de OKRs</CardTitle>
-            </div>
-            <CardDescription>
-              Entenda como o progresso é mensurado automaticamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-gray-600">
-            <p>
-              O progresso de um OKR é derivado de uma média ponderada dos KPIs
-              vinculados a ele. A fórmula utilizada é:
-            </p>
-            <div className="bg-muted p-4 rounded-md font-mono text-xs">
-              Progresso OKR = (Σ (Progresso KPI × Peso KPI)) / Σ Pesos
-            </div>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>
-                <strong>Progresso do KPI:</strong> Calculado como{' '}
-                <code>(Valor Atual / Meta) × 100</code>. Limitado a 100% para
-                fins de cálculo do OKR, evitando distorções.
-              </li>
-              <li>
-                <strong>Pesos:</strong> Definidos na criação do vínculo entre
-                OKR e KPI. A soma dos pesos deve idealmente ser 100, mas o
-                sistema normaliza automaticamente se for diferente.
-              </li>
-              <li>
-                <strong>Status Automático:</strong>
-                <ul className="list-none pl-2 mt-1 space-y-1">
+        <TabsContent value="modules" className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Visão Geral do Sistema</CardTitle>
+                <CardDescription>Entendendo a estrutura</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-gray-600">
+                <p>
+                  O StratManager é dividido em módulos interconectados para
+                  garantir o alinhamento estratégico da Zucchetti Brasil:
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
                   <li>
-                    <Badge className="bg-emerald-100 text-emerald-800 border-0">
-                      Verde
-                    </Badge>{' '}
-                    Progresso ≥ 100%
+                    <strong>Dashboard:</strong> Visão consolidada do progresso
+                    da empresa e das unidades de negócio (BUs).
                   </li>
                   <li>
-                    <Badge className="bg-amber-100 text-amber-800 border-0">
-                      Amarelo
-                    </Badge>{' '}
-                    Progresso ≥ 90%
+                    <strong>OKRs:</strong> Objetivos de alto nível (Anuais ou
+                    Plurianuais).
                   </li>
                   <li>
-                    <Badge className="bg-red-100 text-red-800 border-0">
-                      Vermelho
-                    </Badge>{' '}
-                    Progresso &lt; 90%
+                    <strong>KPIs:</strong> Indicadores mensais que alimentam os
+                    OKRs.
+                  </li>
+                  <li>
+                    <strong>Planos de Ação:</strong> Iniciativas táticas para
+                    corrigir desvios ou impulsionar resultados.
                   </li>
                 </ul>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Níveis de Acesso</CardTitle>
+                <CardDescription>Papéis e Responsabilidades</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[200px]">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-sm">Diretor Geral</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Acesso total. Visualiza todas as BUs, cria OKRs
+                        estratégicos globais e gerencia usuários.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Diretor de BU</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Gestão da sua Unidade. Cria OKRs da unidade, valida KPIs
+                        e aprova planos de ação.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">GPM (Gestor)</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Operacional. Atualiza mensalmente os KPIs, cria Planos
+                        de Ação e reporta resultados.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Viewer</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Apenas leitura. Acesso a relatórios e dashboards.
+                      </p>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-[#003366]">
-              <ShieldCheck className="h-6 w-6" />
-              <CardTitle>Governança e Auditoria</CardTitle>
-            </div>
-            <CardDescription>
-              Regras para integridade dos dados e rastreabilidade.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-gray-600">
-            <p>
-              Para garantir a confiabilidade das informações estratégicas, o
-              sistema implementa um controle rigoroso de alterações.
-            </p>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="audit">
-                <AccordionTrigger>Trilha de Auditoria</AccordionTrigger>
-                <AccordionContent>
-                  Todas as alterações em valores de KPIs, metas e status de
-                  planos de ação são registradas imutavelmente com: Autor,
-                  Data/Hora, Valor Anterior, Novo Valor e Justificativa.
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="retroactive">
-                <AccordionTrigger>Edições Retroativas</AccordionTrigger>
-                <AccordionContent>
-                  Alterações em datas passadas são permitidas apenas para perfis
-                  de <strong>Gestor (GPM)</strong> e <strong>Diretor</strong>.
-                  Essas ações geram alertas específicos para a governança e
-                  exigem justificativa detalhada obrigatória.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
+        <TabsContent value="okr" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestão de Objetivos (OKRs)</CardTitle>
+              <CardDescription>
+                Como definir e acompanhar metas estratégicas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="create">
+                  <AccordionTrigger>Como criar um novo OKR?</AccordionTrigger>
+                  <AccordionContent className="text-gray-600">
+                    <ol className="list-decimal pl-5 space-y-2">
+                      <li>
+                        Acesse o menu <strong>Meus OKRs</strong>.
+                      </li>
+                      <li>
+                        Clique no botão <strong>Novo OKR</strong> no canto
+                        superior direito.
+                      </li>
+                      <li>
+                        Preencha o Título, Descrição, Unidade de Negócio e o
+                        período (Anual ou Plurianual).
+                      </li>
+                      <li>
+                        Defina o <strong>Peso Estratégico</strong> (1-100) para
+                        priorização.
+                      </li>
+                      <li>
+                        Vincule os KPIs existentes que compõem este resultado.
+                        Se o KPI não existir, você poderá criá-lo depois.
+                      </li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="calc">
+                  <AccordionTrigger>
+                    Como o progresso é calculado?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600">
+                    <p className="mb-2">
+                      O progresso do OKR é a média ponderada dos KPIs vinculados
+                      a ele.
+                    </p>
+                    <div className="bg-muted p-3 rounded font-mono text-xs mb-2">
+                      Progresso OKR = (Σ (Progresso KPI × Peso KPI)) / Σ Pesos
+                    </div>
+                    <p>
+                      Exemplo: Se você tem dois KPIs com peso 50 cada, e um está
+                      100% concluído e o outro 0%, seu OKR estará em 50%.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-[#003366]">
-              <Users className="h-6 w-6" />
-              <CardTitle>Papéis e Permissões</CardTitle>
-            </div>
-            <CardDescription>Matriz de acesso por função.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[200px]">
-              <div className="space-y-4">
+        <TabsContent value="kpi" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Indicadores (KPIs)</CardTitle>
+              <CardDescription>
+                Monitoramento mensal e atualização de valores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="update">
+                  <AccordionTrigger>
+                    Atualização Mensal (Fechamento)
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600">
+                    <p className="mb-2">
+                      Todo início de mês, os gestores devem lançar os resultados
+                      do mês anterior.
+                    </p>
+                    <ol className="list-decimal pl-5 space-y-2">
+                      <li>
+                        Acesse o KPI desejado na lista ou dentro de um OKR.
+                      </li>
+                      <li>
+                        Use o painel <strong>Atualizar Medição</strong>.
+                      </li>
+                      <li>
+                        Insira a <strong>Data de Referência</strong> (ex: último
+                        dia do mês passado).
+                      </li>
+                      <li>
+                        Insira o <strong>Novo Valor</strong> acumulado.
+                      </li>
+                      <li>
+                        Se o status for Amarelo ou Vermelho, é{' '}
+                        <strong>obrigatório</strong> inserir uma justificativa.
+                      </li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="status">
+                  <AccordionTrigger>Regras de Cores (Status)</AccordionTrigger>
+                  <AccordionContent className="text-gray-600">
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-emerald-100 text-emerald-800 border-0">
+                          Verde
+                        </Badge>
+                        <span>Atingiu 100% ou mais da meta.</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-amber-100 text-amber-800 border-0">
+                          Amarelo
+                        </Badge>
+                        <span>Entre 90% e 99% da meta. Requer atenção.</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-red-100 text-red-800 border-0">
+                          Vermelho
+                        </Badge>
+                        <span>
+                          Abaixo de 90%. Crítico, exige Plano de Ação.
+                        </span>
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="action-plans" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Planos de Ação</CardTitle>
+              <CardDescription>
+                Gestão de iniciativas para correção e melhoria.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="create-plan">
+                  <AccordionTrigger>Criando um Plano de Ação</AccordionTrigger>
+                  <AccordionContent className="text-gray-600">
+                    <p className="mb-2">
+                      Planos de ação podem ser criados a partir da tela de um
+                      KPI, de um OKR, ou do menu "Planos de Ação".
+                    </p>
+                    <ol className="list-decimal pl-5 space-y-2">
+                      <li>Clique em "Novo Plano".</li>
+                      <li>Defina um título claro e uma data limite (prazo).</li>
+                      <li>
+                        Selecione a <strong>Entidade Principal</strong> (o KPI
+                        ou OKR que originou a necessidade deste plano).
+                      </li>
+                      <li>
+                        (Opcional) Use a seção{' '}
+                        <strong>Conexões Estratégicas</strong> para vincular
+                        outros KPIs ou OKRs que também serão impactados por este
+                        plano.
+                      </li>
+                      <li>
+                        Adicione tarefas específicas com responsáveis e prazos
+                        individuais.
+                      </li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="linkage">
+                  <AccordionTrigger>Associação Múltipla</AccordionTrigger>
+                  <AccordionContent className="text-gray-600">
+                    <p>
+                      Um plano de ação muitas vezes impacta mais de um
+                      indicador. O sistema permite vincular um plano a múltiplos
+                      OKRs e KPIs simultaneamente para garantir visibilidade
+                      cruzada.
+                    </p>
+                    <p className="mt-2">
+                      No detalhe do plano, você verá tags indicando todos os
+                      itens vinculados.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="audit" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Auditoria e Rastreabilidade</CardTitle>
+              <CardDescription>
+                Garantia da integridade da informação.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-600 space-y-4">
+              <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <ShieldCheck className="h-6 w-6 text-blue-600 mt-1" />
                 <div>
-                  <h4 className="font-semibold text-sm">Diretor Geral</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Acesso total a todas as BUs. Pode configurar regras de
-                    notificação globais e visualizar todos os dados.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm">Diretor de BU</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Gestão completa de sua Unidade de Negócio. Pode criar OKRs,
-                    validar KPIs e gerenciar o time da BU. Restrito aos dados da
-                    sua unidade.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm">GPM (Gestor)</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Responsável pela atualização mensal dos KPIs e gestão dos
-                    Planos de Ação. Pode propor novos KPIs.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm">Viewer</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Acesso apenas para visualização de dashboards e relatórios.
+                  <h4 className="font-semibold text-blue-900 mb-1">
+                    Logs Imutáveis
+                  </h4>
+                  <p>
+                    Toda alteração de valor (meta ou realizado) gera um registro
+                    automático contendo: Quem alterou (Nome do Usuário), Data e
+                    Hora, Valor Antigo, Novo Valor e Justificativa.
                   </p>
                 </div>
               </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-[#003366]">
-              <Workflow className="h-6 w-6" />
-              <CardTitle>Planos de Ação</CardTitle>
-            </div>
-            <CardDescription>
-              Metodologia para correção de desvios.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-gray-600 space-y-4">
-            <p>
-              Quando um KPI atinge o status{' '}
-              <span className="text-red-600 font-bold">Crítico</span>, o sistema
-              recomenda a criação imediata de um Plano de Ação.
-            </p>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>Identificação da Causa Raiz.</li>
-              <li>Definição de tarefas com responsáveis e prazos.</li>
-              <li>Monitoramento semanal até a normalização do indicador.</li>
-            </ol>
-            <p className="mt-2">
-              Planos cancelados exigem justificativa formal registrada em
-              auditoria.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="border p-4 rounded-md">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <History className="h-4 w-4" /> Histórico de Versões
+                  </h4>
+                  <p>
+                    Nos detalhes de KPIs e OKRs, utilize o botão "Comparar
+                    Versões" para visualizar lado a lado o que mudou entre duas
+                    datas específicas.
+                  </p>
+                </div>
+                <div className="border p-4 rounded-md">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <FileBarChart className="h-4 w-4" /> Relatórios de Auditoria
+                  </h4>
+                  <p>
+                    Administradores podem exportar o log completo de atividades
+                    em CSV para compliance externo através do menu
+                    Configurações.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

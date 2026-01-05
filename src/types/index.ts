@@ -124,6 +124,7 @@ export type ActionPlan = {
   createdAt: string
   updatedAt: string
   linkedKpiIds?: string[] // Additional linked KPIs
+  linkedOkrIds?: string[] // Additional linked OKRs
 }
 
 export type AuditEntity =
