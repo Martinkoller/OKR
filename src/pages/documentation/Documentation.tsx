@@ -24,6 +24,7 @@ import {
   BarChart3,
   HelpCircle,
   LayoutDashboard,
+  Rocket,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -40,8 +41,11 @@ export default function Documentation() {
         </p>
       </div>
 
-      <Tabs defaultValue="modules" className="space-y-6">
+      <Tabs defaultValue="onboarding" className="space-y-6">
         <TabsList className="w-full justify-start h-auto flex-wrap p-2 gap-2">
+          <TabsTrigger value="onboarding" className="gap-2">
+            <Rocket className="h-4 w-4" /> Primeiros Passos
+          </TabsTrigger>
           <TabsTrigger value="modules" className="gap-2">
             <LayoutDashboard className="h-4 w-4" /> Módulos Principais
           </TabsTrigger>
@@ -58,6 +62,59 @@ export default function Documentation() {
             <History className="h-4 w-4" /> Auditoria & Governança
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="onboarding" className="space-y-6">
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader>
+              <CardTitle>Bem-vindo ao StratManager</CardTitle>
+              <CardDescription>
+                Guia rápido para começar a utilizar a plataforma.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">1. Navegação Inicial</h3>
+                <p className="text-muted-foreground text-sm">
+                  Ao entrar, você verá o <strong>Dashboard</strong>, que resume
+                  o progresso geral. Utilize a barra lateral esquerda para
+                  navegar entre os módulos.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">
+                  2. Configurando seu Perfil
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  Verifique se você tem acesso às Unidades de Negócio (BUs)
+                  corretas. Seu nome completo será exibido em todas as ações que
+                  você realizar no sistema (criação de planos, atualização de
+                  KPIs, etc).
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">
+                  3. Fluxo de Trabalho Básico
+                </h3>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                  <li>
+                    <strong>Monitore:</strong> Acompanhe os gráficos de evolução
+                    no Dashboard.
+                  </li>
+                  <li>
+                    <strong>Analise:</strong> Se um KPI estiver vermelho, clique
+                    para ver detalhes.
+                  </li>
+                  <li>
+                    <strong>Aja:</strong> Crie um Plano de Ação para corrigir
+                    desvios.
+                  </li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="modules" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">

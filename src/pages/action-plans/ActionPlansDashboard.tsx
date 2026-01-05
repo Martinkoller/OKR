@@ -93,6 +93,10 @@ export const ActionPlansDashboard = () => {
     return true
   })
 
+  const getOwnerName = (ownerId: string) => {
+    return users.find((u) => u.id === ownerId)?.name || ownerId
+  }
+
   const handleCreate = () => {
     setSelectedPlan(undefined)
     setIsModalOpen(true)
@@ -239,8 +243,7 @@ export const ActionPlansDashboard = () => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="text-sm">
-                              {users.find((u) => u.id === plan.ownerId)?.name ||
-                                'N/A'}
+                              {getOwnerName(plan.ownerId)}
                             </span>
                           </div>
                         </TableCell>

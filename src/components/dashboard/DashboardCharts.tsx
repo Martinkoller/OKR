@@ -29,6 +29,7 @@ import {
 import { ClipboardList, TrendingUp, AlertTriangle } from 'lucide-react'
 import { KPI, ActionPlan } from '@/types'
 import { ActionPlanSummary } from '@/components/dashboard/ActionPlanSummary'
+import { formatNumber } from '@/lib/formatters'
 
 interface DashboardChartsProps {
   trendData: any[]
@@ -146,7 +147,7 @@ export const DashboardCharts = ({
                       {kpi.name}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      Meta: {kpi.goal} {kpi.unit}
+                      Meta: {formatNumber(kpi.goal, kpi.unit)}
                     </p>
                   </div>
                   <StatusBadge status={kpi.status} />
@@ -154,10 +155,7 @@ export const DashboardCharts = ({
 
                 <div className="mt-auto flex items-center justify-between pt-2">
                   <span className="text-lg font-bold font-mono">
-                    {kpi.currentValue}{' '}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {kpi.unit}
-                    </span>
+                    {formatNumber(kpi.currentValue, kpi.unit)}
                   </span>
 
                   <div className="flex items-center gap-2">

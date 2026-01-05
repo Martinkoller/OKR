@@ -37,6 +37,8 @@ interface UserState {
   // Dashboard Config per BU
   dashboardConfigs: Record<string, DashboardConfig>
   biConfig: BIConfig
+  // Onboarding
+  hasSeenOnboarding: boolean
 
   // Auth
   login: (email: string) => boolean
@@ -100,6 +102,9 @@ interface UserState {
   // BI Integration
   updateBIConfig: (config: BIConfig) => void
 
+  // Onboarding
+  completeOnboarding: () => void
+
   // Helpers
   getAllAccessibleBUIds: (userId: string) => string[]
   isGlobalView: () => boolean
@@ -137,6 +142,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     updatedAt: new Date().toISOString(),
     updatedBy: 'system',
   },
+  hasSeenOnboarding: localStorage.getItem('stratmanager_onboarding') === 'true',
 
   login: (email) => {
     const user = get().users.find((u) => u.email === email && u.active)
@@ -473,6 +479,11 @@ export const useUserStore = create<UserState>((set, get) => ({
   },
 
   updateBIConfig: (config) => set(() => ({ biConfig: config })),
+
+  completeOnboarding: () => {
+    localStorage.setItem('stratmanager_onboarding', 'true')
+    set({ hasSeenOnboarding: true })
+  },
 
   getAllAccessibleBUIds: (userId) => {
     const state = get()

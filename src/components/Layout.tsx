@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { HeaderNotifications } from '@/components/layout/HeaderNotifications'
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 import { useEffect } from 'react'
 
 export default function Layout() {
@@ -75,6 +76,7 @@ export default function Layout() {
 
   return (
     <SidebarProvider>
+      <OnboardingModal />
       <div className="flex min-h-screen w-full">
         <div className="print:hidden">
           <Sidebar>

@@ -67,6 +67,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { BUFilter } from '@/components/dashboard/BUFilter'
+import { formatNumber } from '@/lib/formatters'
 
 export const AnnualComparison = () => {
   const { okrs, kpis, addAuditEntry } = useDataStore()
@@ -143,8 +144,8 @@ export const AnnualComparison = () => {
         Type: 'KPI',
         Name: kpi.name,
         BU: kpi.buId,
-        [`Value_${yearA}`]: valA,
-        [`Value_${yearB}`]: valB,
+        [`Value_${yearA}`]: formatNumber(valA, kpi.unit),
+        [`Value_${yearB}`]: formatNumber(valB, kpi.unit),
         Variation_Pct: `${percentDelta.toFixed(2)}%`,
         Status: kpi.status,
       })
@@ -406,13 +407,13 @@ export const AnnualComparison = () => {
                           {kpi.name}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {kpi.goal} {kpi.unit}
+                          {formatNumber(kpi.goal, kpi.unit)}
                         </TableCell>
                         <TableCell className="text-right font-mono text-muted-foreground">
-                          {valA.toLocaleString()}
+                          {formatNumber(valA, kpi.unit)}
                         </TableCell>
                         <TableCell className="text-right font-mono font-medium">
-                          {valB.toLocaleString()}
+                          {formatNumber(valB, kpi.unit)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div

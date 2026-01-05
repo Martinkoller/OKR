@@ -19,10 +19,11 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { usePermissions } from '@/hooks/usePermissions'
 import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
 import { BUFilter } from '@/components/dashboard/BUFilter'
+import { formatFrequency, formatNumber } from '@/lib/formatters'
 
 export const KPIList = () => {
   const { kpis } = useDataStore()
-  const { selectedBUIds, isGlobalView } = useUserStore()
+  const { selectedBUIds, isGlobalView, users } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const isMobile = useIsMobile()
   const { canCreate } = usePermissions()
@@ -40,6 +41,10 @@ export const KPIList = () => {
       .includes(searchTerm.toLowerCase())
     return matchesBU && matchesSearch
   })
+
+  const getOwnerName = (ownerId: string) => {
+    return users.find((u) => u.id === ownerId)?.name || ownerId
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -94,15 +99,15 @@ export const KPIList = () => {
                         Atual
                       </span>
                       <span className="font-medium">
-                        {kpi.currentValue} {kpi.unit}
+                        {formatNumber(kpi.currentValue, kpi.unit)}
                       </span>
                     </div>
                     <div>
                       <span className="block text-xs text-muted-foreground">
-                        Meta
+                        Responsável
                       </span>
-                      <span className="font-medium">
-                        {kpi.goal} {kpi.unit}
+                      <span className="font-medium text-xs">
+                        {getOwnerName(kpi.ownerId)}
                       </span>
                     </div>
                   </div>
@@ -118,10 +123,11 @@ export const KPIList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Nome</TableHead>
+                  <TableHead className="w-[30%]">Nome</TableHead>
                   <TableHead>Frequência</TableHead>
                   <TableHead>Meta</TableHead>
                   <TableHead>Valor Atual</TableHead>
+                  <TableHead>Responsável</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -140,20 +146,15 @@ export const KPIList = () => {
                         {kpi.description}
                       </p>
                     </TableCell>
-                    <TableCell className="text-xs uppercase">
-                      {kpi.frequency}
+                    <TableCell className="text-xs">
+                      {formatFrequency(kpi.frequency)}
                     </TableCell>
-                    <TableCell>
-                      {kpi.goal}{' '}
-                      <span className="text-xs text-muted-foreground">
-                        {kpi.unit}
-                      </span>
-                    </TableCell>
+                    <TableCell>{formatNumber(kpi.goal, kpi.unit)}</TableCell>
                     <TableCell className="font-bold">
-                      {kpi.currentValue}{' '}
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {kpi.unit}
-                      </span>
+                      {formatNumber(kpi.currentValue, kpi.unit)}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {getOwnerName(kpi.ownerId)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={kpi.status} />
@@ -168,7 +169,7 @@ export const KPIList = () => {
                 {filteredKPIs.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="text-center text-muted-foreground py-8"
                     >
                       Nenhum KPI encontrado para os filtros selecionados.
