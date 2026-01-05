@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import {
@@ -28,6 +29,12 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Template } from '@/types'
+import { Calculator, Database, Variable } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const formSchema = z.object({
   title: z.string().min(3, 'O título é obrigatório'),
@@ -69,6 +76,8 @@ export const TemplateFormDialog = ({
     },
   })
 
+  const [formulaValue, setFormulaValue] = useState('')
+
   useEffect(() => {
     if (templateToEdit) {
       form.reset({
@@ -81,6 +90,7 @@ export const TemplateFormDialog = ({
         kpiType: templateToEdit.kpiType,
         scope: templateToEdit.scope,
       })
+      setFormulaValue(templateToEdit.formula || '')
     } else {
       form.reset({
         title: '',
@@ -92,14 +102,26 @@ export const TemplateFormDialog = ({
         kpiType: 'QUANT',
         scope: 'ANNUAL',
       })
+      setFormulaValue('')
     }
   }, [templateToEdit, isOpen, form])
+
+  // Sync internal state with form
+  const handleFormulaChange = (val: string) => {
+    setFormulaValue(val)
+    form.setValue('formula', val)
+  }
+
+  const insertPlaceholder = (placeholder: string) => {
+    const newVal = formulaValue + placeholder
+    handleFormulaChange(newVal)
+  }
 
   const templateType = form.watch('type')
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {templateToEdit ? 'Editar Modelo' : 'Novo Modelo'}
@@ -166,22 +188,75 @@ export const TemplateFormDialog = ({
 
               {templateType === 'KPI' && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="formula"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fórmula / Método de Cálculo</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ex: (Novos Clientes / Total) * 100"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-2 border rounded-md p-4 bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="flex items-center gap-2">
+                        <Calculator className="h-4 w-4" />
+                        Construtor de Fórmulas Dinâmicas
+                      </FormLabel>
+                      <div className="flex gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => insertPlaceholder('[KPI:Ref]')}
+                            >
+                              <Variable className="h-3 w-3 mr-1" /> KPI
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Referência a outro KPI
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => insertPlaceholder('[EXT:Source]')}
+                            >
+                              <Database className="h-3 w-3 mr-1" /> External
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Placeholder para dado externo
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="formula"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                placeholder="Ex: ([KPI:Novos] / [EXT:Total]) * 100"
+                                {...field}
+                                value={formulaValue}
+                                onChange={(e) =>
+                                  handleFormulaChange(e.target.value)
+                                }
+                                className="font-mono"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Utilize variáveis para cálculos complexos. Suporta
+                            operações básicas (+, -, *, /).
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}

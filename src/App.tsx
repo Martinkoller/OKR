@@ -23,6 +23,7 @@ import NotificationSettings from './pages/settings/NotificationSettings'
 import { Users } from './pages/settings/Users'
 import { Groups } from './pages/settings/Groups'
 import LoginPage from './components/auth/LoginPage'
+import BIIntegration from './pages/integrations/BIIntegration'
 import { useUserStore } from './stores/useUserStore'
 
 const ProtectedRoute = () => {
@@ -52,6 +53,7 @@ const App = () => (
               element={<AnnualComparison />}
             />
             <Route path="/reports/builder" element={<CustomReportBuilder />} />
+            <Route path="/integrations" element={<BIIntegration />} />
             <Route path="/audit" element={<Admin />} />
             <Route path="/documentation" element={<Documentation />} />
             <Route

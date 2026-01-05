@@ -129,6 +129,7 @@ export type AuditEntity =
   | 'SYSTEM'
   | 'PAGE'
   | 'TEMPLATE'
+  | 'INTEGRATION'
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'ACCESS'
 
 export type AuditEntry = {
@@ -206,6 +207,16 @@ export interface Alert {
 export interface DashboardConfig {
   pinnedOKRIds: string[]
   pinnedKPIIds: string[]
+}
+
+export interface BIConfig {
+  provider: 'POWER_BI'
+  enabled: boolean
+  workspaceId?: string
+  reportId?: string
+  embedUrl?: string
+  updatedAt: string
+  updatedBy: string
 }
 
 export const KPI_STATUS_COLORS = {

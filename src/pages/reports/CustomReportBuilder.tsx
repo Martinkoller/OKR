@@ -3,9 +3,10 @@ import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import { Button } from '@/components/ui/button'
-import { Download, Printer, FileSpreadsheet } from 'lucide-react'
+import { Download, Printer, FileSpreadsheet, Activity } from 'lucide-react'
 import { ReportBuilderFilters } from '@/components/reports/ReportBuilderFilters'
 import { ReportBuilderPreview } from '@/components/reports/ReportBuilderPreview'
+import { AuditAnalysisReport } from '@/components/reports/AuditAnalysisReport'
 import { generateReportCSV, printReport } from '@/lib/report-utils'
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/hooks/use-toast'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function CustomReportBuilder() {
   const { bus, selectedBUIds, isGlobalView, currentUser } = useUserStore()
@@ -86,7 +88,7 @@ export default function CustomReportBuilder() {
     if (selectedKPIIds.length === 0 && filteredKPIs.length > 0) {
       setSelectedKPIIds(filteredKPIs.slice(0, 3).map((k) => k.id))
     }
-  }, [selectedBUIds]) // Reset on BU change if empty? Or keep selection. Simplest is keep logic simple.
+  }, [selectedBUIds])
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -96,7 +98,7 @@ export default function CustomReportBuilder() {
             Construtor de Relatórios
           </h1>
           <p className="text-muted-foreground mt-1">
-            Selecione métricas e gere documentos customizados para análise.
+            Gere documentos customizados e analise a integridade dos dados.
           </p>
         </div>
         {canExport('REPORT') && (
@@ -118,26 +120,45 @@ export default function CustomReportBuilder() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 space-y-6 print:hidden">
-          <ReportBuilderFilters
-            bus={bus}
-            okrs={filteredOKRs}
-            kpis={filteredKPIs}
-            selectedOKRIds={selectedOKRIds}
-            setSelectedOKRIds={setSelectedOKRIds}
-            selectedKPIIds={selectedKPIIds}
-            setSelectedKPIIds={setSelectedKPIIds}
-          />
-        </div>
+      <Tabs defaultValue="performance" className="space-y-6">
+        <TabsList className="print:hidden">
+          <TabsTrigger value="performance">Relatório de Desempenho</TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2">
+            <Activity className="h-4 w-4" /> Análise de Auditoria
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="lg:col-span-2">
-          <ReportBuilderPreview
-            okrs={reportOKRs}
-            kpis={reportKPIs}
-            selectedBUName={getContextName()}
-          />
-        </div>
+        <TabsContent value="performance">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6 print:hidden">
+              <ReportBuilderFilters
+                bus={bus}
+                okrs={filteredOKRs}
+                kpis={filteredKPIs}
+                selectedOKRIds={selectedOKRIds}
+                setSelectedOKRIds={setSelectedOKRIds}
+                selectedKPIIds={selectedKPIIds}
+                setSelectedKPIIds={setSelectedKPIIds}
+              />
+            </div>
+
+            <div className="lg:col-span-2">
+              <ReportBuilderPreview
+                okrs={reportOKRs}
+                kpis={reportKPIs}
+                selectedBUName={getContextName()}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AuditAnalysisReport />
+        </TabsContent>
+      </Tabs>
+
+      <div className="hidden print:block text-center text-xs text-muted-foreground mt-8 pt-4 border-t">
+        <p>StratManager by MarteckConsultoria &copy; 2024</p>
       </div>
     </div>
   )

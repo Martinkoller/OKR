@@ -10,6 +10,7 @@ import {
   Alert,
   DashboardConfig,
   NotificationTargetType,
+  BIConfig,
 } from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 
@@ -33,6 +34,7 @@ interface UserState {
   notificationRules: NotificationRule[]
   // Dashboard Config per BU
   dashboardConfigs: Record<string, DashboardConfig>
+  biConfig: BIConfig
 
   // Auth
   login: (email: string) => boolean
@@ -80,6 +82,9 @@ interface UserState {
     isRetroactive: boolean,
   ) => void
 
+  // BI Integration
+  updateBIConfig: (config: BIConfig) => void
+
   // Helpers
   getAllAccessibleBUIds: (userId: string) => string[]
   isGlobalView: () => boolean
@@ -111,6 +116,12 @@ export const useUserStore = create<UserState>((set, get) => ({
   alerts: [],
   notificationRules: MOCK_RULES,
   dashboardConfigs: {},
+  biConfig: {
+    provider: 'POWER_BI',
+    enabled: false,
+    updatedAt: new Date().toISOString(),
+    updatedBy: 'system',
+  },
 
   login: (email) => {
     const user = get().users.find((u) => u.email === email && u.active)
@@ -328,14 +339,6 @@ export const useUserStore = create<UserState>((set, get) => ({
       }
 
       if (shouldTrigger) {
-        // Determine recipient (Owner or Rule Creator)
-        // Ideally should alert the owner AND the rule creator
-        // For now, simpler implementation: Alert the current user via alert list?
-        // No, typically notifications go to specific users.
-        // We will add alert to the store list which is global for now (needs user filtering in real app)
-        // We will assume alerts are visible to everyone or filtered by receiver in backend.
-        // Here we simulate alert for the current user if they are the owner or rule creator.
-
         const alertMessage =
           rule.triggerCondition === 'THRESHOLD'
             ? `O ${entityType} "${'title' in entity ? entity.title : entity.name}" ultrapassou o limite definido: ${rule.operator} ${rule.threshold}`
@@ -363,6 +366,8 @@ export const useUserStore = create<UserState>((set, get) => ({
       }
     })
   },
+
+  updateBIConfig: (config) => set(() => ({ biConfig: config })),
 
   getAllAccessibleBUIds: (userId) => {
     const state = get()
