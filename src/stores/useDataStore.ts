@@ -115,7 +115,11 @@ export const useDataStore = create<DataState>((set) => ({
 
   updateOKR: (okr, userId) => {
     set((state) => {
-      const newOKRs = state.okrs.map((o) => (o.id === okr.id ? okr : o))
+      // Calculate progress and status based on current KPIs (in case kpiIds changed)
+      const { progress, status } = calculateOKRProgress(okr, state.kpis)
+      const updatedOKR = { ...okr, progress, status }
+
+      const newOKRs = state.okrs.map((o) => (o.id === okr.id ? updatedOKR : o))
       const auditEntry: AuditEntry = {
         id: Math.random().toString(36).substr(2, 9),
         entityId: okr.id,
@@ -192,6 +196,10 @@ export const useDataStore = create<DataState>((set) => ({
 
   addOKR: (okr, userId) => {
     set((state) => {
+      // Calculate initial progress based on linked KPIs
+      const { progress, status } = calculateOKRProgress(okr, state.kpis)
+      const newOKR = { ...okr, progress, status }
+
       const auditEntry: AuditEntry = {
         id: Math.random().toString(36).substr(2, 9),
         entityId: okr.id,
@@ -203,7 +211,7 @@ export const useDataStore = create<DataState>((set) => ({
       }
 
       return {
-        okrs: [...state.okrs, okr],
+        okrs: [...state.okrs, newOKR],
         auditLogs: [auditEntry, ...state.auditLogs],
       }
     })

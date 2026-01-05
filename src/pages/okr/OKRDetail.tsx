@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '@/stores/useDataStore'
+import { useUserStore } from '@/stores/useUserStore'
 import {
   Card,
   CardContent,
@@ -19,6 +20,9 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
+  Unlink,
+  Plus,
+  Edit,
 } from 'lucide-react'
 import { ActionPlanList } from '@/components/ActionPlanList'
 import { calculateOKRProgressForDate, predictTrend } from '@/lib/kpi-utils'
@@ -30,7 +34,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
   ComposedChart,
 } from 'recharts'
 import {
@@ -42,10 +45,21 @@ import {
 } from '@/components/ui/chart'
 import { cn } from '@/lib/utils'
 import { KPIStatus } from '@/types'
+import { useToast } from '@/hooks/use-toast'
+import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
+import { useState } from 'react'
+import { OKRFormDialog } from '@/components/okr/OKRFormDialog'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export const OKRDetail = () => {
   const { id } = useParams()
-  const { okrs, kpis } = useDataStore()
+  const { okrs, kpis, updateOKR } = useDataStore()
+  const { users, bus, currentUser } = useUserStore()
+  const { toast } = useToast()
+  const { canEdit } = usePermissions()
+
+  const [isKPIFormOpen, setIsKPIFormOpen] = useState(false)
+  const [isEditOKROpen, setIsEditOKROpen] = useState(false)
 
   const okr = okrs.find((o) => o.id === id)
 
@@ -55,6 +69,33 @@ export const OKRDetail = () => {
 
   const linkedKPIs = kpis.filter((k) => okr.kpiIds.includes(k.id))
 
+  // Helper names
+  const getOwnerName = (userId: string) =>
+    users.find((u) => u.id === userId)?.name || userId
+  const getBUName = (buId: string) =>
+    bus.find((b) => b.id === buId)?.name || buId
+
+  const handleUnlinkKPI = (kpiId: string) => {
+    if (!currentUser) return
+    if (confirm('Tem certeza que deseja desvincular este KPI do OKR?')) {
+      const newKpiIds = okr.kpiIds.filter((id) => id !== kpiId)
+      const updatedOKR = { ...okr, kpiIds: newKpiIds }
+      updateOKR(updatedOKR, currentUser.id)
+      toast({
+        title: 'KPI Desvinculado',
+        description: 'O indicador foi removido deste OKR.',
+      })
+    }
+  }
+
+  const handleKPICreated = (kpi: any) => {
+    if (!currentUser) return
+    const newKpiIds = [...okr.kpiIds, kpi.id]
+    const updatedOKR = { ...okr, kpiIds: newKpiIds }
+    updateOKR(updatedOKR, currentUser.id)
+    setIsKPIFormOpen(false)
+  }
+
   // Simulate/Calculate History for the last 6 months
   const today = new Date()
   const historyData: any[] = []
@@ -63,11 +104,6 @@ export const OKRDetail = () => {
     const date = subMonths(today, i)
     // End of that month
     const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0)
-
-    // Only go up to current date (approx)
-    if (endOfMonth > today) {
-      // use today
-    }
 
     const { progress } = calculateOKRProgressForDate(okr, kpis, endOfMonth)
     historyData.push({
@@ -111,17 +147,30 @@ export const OKRDetail = () => {
     else estimatedStatus = 'RED'
   }
 
+  const canManage = canEdit('OKR')
+
   return (
     <div className="space-y-8 animate-fade-in">
-      <Button
-        variant="ghost"
-        asChild
-        className="pl-0 hover:pl-2 transition-all no-print"
-      >
-        <Link to="/okrs">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para OKRs
-        </Link>
-      </Button>
+      <div className="flex justify-between items-center">
+        <Button
+          variant="ghost"
+          asChild
+          className="pl-0 hover:pl-2 transition-all no-print"
+        >
+          <Link to="/okrs">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para OKRs
+          </Link>
+        </Button>
+        {canManage && (
+          <Button
+            variant="outline"
+            onClick={() => setIsEditOKROpen(true)}
+            className="no-print"
+          >
+            <Edit className="mr-2 h-4 w-4" /> Editar OKR
+          </Button>
+        )}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Info */}
@@ -291,11 +340,18 @@ export const OKRDetail = () => {
           </div>
 
           <Card className="page-break">
-            <CardHeader>
-              <CardTitle>KPIs Vinculados</CardTitle>
-              <CardDescription>
-                Indicadores que compõem este resultado
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>KPIs Vinculados</CardTitle>
+                <CardDescription>
+                  Indicadores que compõem este resultado
+                </CardDescription>
+              </div>
+              {canManage && (
+                <Button size="sm" onClick={() => setIsKPIFormOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> Novo KPI
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -319,9 +375,16 @@ export const OKRDetail = () => {
                       <p className="text-sm text-gray-500 mb-2">
                         {kpi.description}
                       </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span>
-                          Peso no OKR: <strong>{kpi.weight}%</strong>
+                          Responsável:{' '}
+                          <strong>{getOwnerName(kpi.ownerId)}</strong>
+                        </span>
+                        <span>
+                          Unidade: <strong>{getBUName(kpi.buId)}</strong>
+                        </span>
+                        <span>
+                          Peso: <strong>{kpi.weight}%</strong>
                         </span>
                         <span>
                           Meta:{' '}
@@ -332,7 +395,7 @@ export const OKRDetail = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 sm:w-48 justify-end">
+                    <div className="flex items-center gap-4 sm:w-auto justify-end">
                       <div className="text-right">
                         <div className="text-sm font-medium">
                           {kpi.currentValue} {kpi.unit}
@@ -342,9 +405,25 @@ export const OKRDetail = () => {
                           className="scale-75 origin-right"
                         />
                       </div>
+                      {canManage && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 no-print"
+                          onClick={() => handleUnlinkKPI(kpi.id)}
+                          title="Desvincular KPI"
+                        >
+                          <Unlink className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
+                {linkedKPIs.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-md">
+                    Nenhum KPI vinculado a este objetivo.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -359,7 +438,7 @@ export const OKRDetail = () => {
             <CardContent className="text-sm space-y-3">
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Responsável</span>
-                <span className="font-medium">User ID: {okr.ownerId}</span>
+                <span className="font-medium">{getOwnerName(okr.ownerId)}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Peso Estratégico</span>
@@ -367,7 +446,7 @@ export const OKRDetail = () => {
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Unidade</span>
-                <span className="font-medium">{okr.buId}</span>
+                <span className="font-medium">{getBUName(okr.buId)}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Início</span>
@@ -387,6 +466,19 @@ export const OKRDetail = () => {
           </Card>
         </div>
       </div>
+
+      <KPIFormDialog
+        open={isKPIFormOpen}
+        onOpenChange={setIsKPIFormOpen}
+        onSuccess={handleKPICreated}
+        defaultValues={{ buId: okr.buId }}
+      />
+
+      <OKRFormDialog
+        open={isEditOKROpen}
+        onOpenChange={setIsEditOKROpen}
+        okrToEdit={okr}
+      />
     </div>
   )
 }

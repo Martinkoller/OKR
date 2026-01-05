@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { TemplateSelector } from '@/components/templates/TemplateSelector'
+import { KPISelector } from '@/components/okr/KPISelector'
 
 const formSchema = z.object({
   title: z.string().min(3, 'O título deve ter pelo menos 3 caracteres'),
@@ -45,21 +46,24 @@ const formSchema = z.object({
   endYear: z.string(),
   weight: z.string().transform((val) => Number(val)),
   ownerId: z.string().min(1, 'Selecione um responsável'),
+  kpiIds: z.array(z.string()).default([]),
 })
 
 interface OKRFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  okrToEdit?: OKR
 }
 
 export const OKRFormDialog = ({
   open,
   onOpenChange,
   onSuccess,
+  okrToEdit,
 }: OKRFormDialogProps) => {
   const { bus, users, currentUser } = useUserStore()
-  const { addOKR } = useDataStore()
+  const { addOKR, updateOKR, kpis } = useDataStore()
   const { toast } = useToast()
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
 
@@ -76,28 +80,60 @@ export const OKRFormDialog = ({
       endYear: currentYear,
       weight: 1,
       ownerId: '',
+      kpiIds: [],
     },
   })
+
+  // Watch BU ID to filter KPI suggestions
+  const selectedBUId = form.watch('buId')
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      form.reset({
-        title: '',
-        description: '',
-        buId: '',
-        scope: 'ANNUAL',
-        startYear: currentYear,
-        endYear: currentYear,
-        weight: 1,
-        ownerId: currentUser?.id || '',
-      })
+      if (okrToEdit) {
+        form.reset({
+          title: okrToEdit.title,
+          description: okrToEdit.description,
+          buId: okrToEdit.buId,
+          scope: okrToEdit.scope,
+          startYear: okrToEdit.startYear.toString(),
+          endYear: okrToEdit.endYear.toString(),
+          weight: okrToEdit.weight,
+          ownerId: okrToEdit.ownerId,
+          kpiIds: okrToEdit.kpiIds,
+        })
+      } else {
+        form.reset({
+          title: '',
+          description: '',
+          buId: '',
+          scope: 'ANNUAL',
+          startYear: currentYear,
+          endYear: currentYear,
+          weight: 1,
+          ownerId: currentUser?.id || '',
+          kpiIds: [],
+        })
+      }
     }
-  }, [open, form, currentYear, currentUser])
+  }, [open, form, currentYear, currentUser, okrToEdit])
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const newOKR: OKR = {
-      id: `okr-${Date.now()}`,
+    // Basic calculation of initial progress if creating new
+    // If editing, the updateOKR action handles it in store now (we updated store)
+    let initialProgress = 0
+    let initialStatus: any = 'GREEN'
+
+    if (!okrToEdit && values.kpiIds.length > 0) {
+      // Manual calc for creation display
+      // Real calc happens in store/usage
+    } else if (okrToEdit) {
+      initialProgress = okrToEdit.progress
+      initialStatus = okrToEdit.status
+    }
+
+    const okrData: OKR = {
+      id: okrToEdit?.id || `okr-${Date.now()}`,
       title: values.title,
       description: values.description || '',
       buId: values.buId,
@@ -106,17 +142,25 @@ export const OKRFormDialog = ({
       endYear: parseInt(values.endYear),
       weight: values.weight,
       ownerId: values.ownerId,
-      kpiIds: [],
-      progress: 0,
-      status: 'GREEN', // Start green by default
+      kpiIds: values.kpiIds,
+      progress: initialProgress,
+      status: initialStatus,
     }
 
     if (currentUser) {
-      addOKR(newOKR, currentUser.id)
-      toast({
-        title: 'OKR Criado',
-        description: `O objetivo "${values.title}" foi criado com sucesso.`,
-      })
+      if (okrToEdit) {
+        updateOKR(okrData, currentUser.id)
+        toast({
+          title: 'OKR Atualizado',
+          description: 'As alterações foram salvas com sucesso.',
+        })
+      } else {
+        addOKR(okrData, currentUser.id)
+        toast({
+          title: 'OKR Criado',
+          description: `O objetivo "${values.title}" foi criado com sucesso.`,
+        })
+      }
       onOpenChange(false)
       onSuccess?.()
     }
@@ -137,20 +181,25 @@ export const OKRFormDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
-            <span>Novo Objetivo Estratégico (OKR)</span>
+            <span>
+              {okrToEdit
+                ? 'Editar Objetivo Estratégico'
+                : 'Novo Objetivo Estratégico (OKR)'}
+            </span>
             <Button
               variant="outline"
               size="sm"
+              type="button"
               onClick={() => setIsTemplateOpen(true)}
             >
               <FileText className="mr-2 h-4 w-4" /> Usar Modelo
             </Button>
           </DialogTitle>
           <DialogDescription>
-            Defina o objetivo, escopo e responsabilidades.
+            Defina o objetivo, escopo e KPIs associados.
           </DialogDescription>
         </DialogHeader>
 
@@ -245,6 +294,27 @@ export const OKRFormDialog = ({
               />
             </div>
 
+            <div className="space-y-2 border rounded-md p-4 bg-gray-50/50">
+              <FormLabel>Associação de KPIs (Key Results)</FormLabel>
+              <FormDescription className="mb-2">
+                Vincule os indicadores que medirão o sucesso deste objetivo.
+              </FormDescription>
+              <FormField
+                control={form.control}
+                name="kpiIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <KPISelector
+                      selectedKpiIds={field.value}
+                      onSelectionChange={field.onChange}
+                      buId={selectedBUId}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -324,7 +394,9 @@ export const OKRFormDialog = ({
               >
                 Cancelar
               </Button>
-              <Button type="submit">Criar OKR</Button>
+              <Button type="submit">
+                {okrToEdit ? 'Salvar Alterações' : 'Criar OKR'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

@@ -51,13 +51,15 @@ const formSchema = z.object({
 interface KPIFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess?: () => void
+  onSuccess?: (kpi: KPI) => void
+  defaultValues?: Partial<KPI>
 }
 
 export const KPIFormDialog = ({
   open,
   onOpenChange,
   onSuccess,
+  defaultValues,
 }: KPIFormDialogProps) => {
   const { bus, users, currentUser } = useUserStore()
   const { addKPI } = useDataStore()
@@ -82,18 +84,18 @@ export const KPIFormDialog = ({
   useEffect(() => {
     if (open) {
       form.reset({
-        name: '',
-        description: '',
-        buId: '',
-        ownerId: currentUser?.id || '',
-        frequency: 'MONTHLY',
-        type: 'QUANT',
-        unit: '',
-        goal: 0,
-        weight: 10,
+        name: defaultValues?.name || '',
+        description: defaultValues?.description || '',
+        buId: defaultValues?.buId || '',
+        ownerId: defaultValues?.ownerId || currentUser?.id || '',
+        frequency: defaultValues?.frequency || 'MONTHLY',
+        type: defaultValues?.type || 'QUANT',
+        unit: defaultValues?.unit || '',
+        goal: defaultValues?.goal || 0,
+        weight: defaultValues?.weight || 10,
       })
     }
-  }, [open, form, currentUser])
+  }, [open, form, currentUser, defaultValues])
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const newKPI: KPI = {
@@ -120,7 +122,7 @@ export const KPIFormDialog = ({
         description: `O indicador "${values.name}" foi registrado.`,
       })
       onOpenChange(false)
-      onSuccess?.()
+      onSuccess?.(newKPI)
     }
   }
 
@@ -148,6 +150,7 @@ export const KPIFormDialog = ({
             <Button
               variant="outline"
               size="sm"
+              type="button"
               onClick={() => setIsTemplateOpen(true)}
             >
               <FileText className="mr-2 h-4 w-4" /> Usar Modelo
