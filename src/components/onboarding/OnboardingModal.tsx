@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -22,72 +22,53 @@ const steps = [
   {
     title: 'Bem-vindo ao StratManager',
     description:
-      'Sua plataforma de Gestão Estratégica Integrada da Zucchetti Brasil. Vamos fazer um tour rápido?',
+      'Sua plataforma de Gestão Estratégica Integrada. Vamos fazer um tour rápido?',
     icon: <Target className="h-12 w-12 text-primary" />,
     content: (
       <div className="space-y-2 text-sm text-muted-foreground">
-        <p>
-          Aqui você poderá acompanhar OKRs, KPIs e Planos de Ação de forma
-          consolidada e transparente.
-        </p>
+        <p>Dados centralizados e seguros com integração Supabase.</p>
       </div>
     ),
   },
   {
-    title: 'Dashboard Integrado',
+    title: 'Monitoramento',
     description:
-      'Visão geral da saúde do negócio com gráficos de evolução e alertas.',
-    icon: <LayoutDashboard className="h-12 w-12 text-blue-600" />,
+      'Acompanhe seus KPIs com formatação local (BRL) e histórico confiável.',
+    icon: <BarChart3 className="h-12 w-12 text-blue-600" />,
     content: (
       <div className="space-y-2 text-sm text-muted-foreground">
-        <p>
-          Monitore o progresso dos objetivos estratégicos e identifique
-          rapidamente indicadores que precisam de atenção.
-        </p>
-      </div>
-    ),
-  },
-  {
-    title: 'OKRs e KPIs',
-    description: 'Conecte a estratégia à operação diária.',
-    icon: <BarChart3 className="h-12 w-12 text-emerald-600" />,
-    content: (
-      <div className="space-y-2 text-sm text-muted-foreground">
-        <p>
-          <strong>OKRs:</strong> Objetivos anuais ou plurianuais ambiciosos.
-        </p>
-        <p>
-          <strong>KPIs:</strong> Métricas mensais que alimentam o progresso dos
-          OKRs.
-        </p>
-      </div>
-    ),
-  },
-  {
-    title: 'Planos de Ação',
-    description: 'Corrija desvios e garanta a execução.',
-    icon: <ClipboardList className="h-12 w-12 text-amber-600" />,
-    content: (
-      <div className="space-y-2 text-sm text-muted-foreground">
-        <p>
-          Crie tarefas e atribua responsáveis para reverter indicadores em
-          alerta ou acelerar resultados.
-        </p>
+        <p>Visualize tendências e comparações anuais com dados reais.</p>
       </div>
     ),
   },
 ]
 
 export const OnboardingModal = () => {
-  const { hasSeenOnboarding, completeOnboarding, isAuthenticated } =
-    useUserStore()
+  const {
+    hasSeenOnboarding,
+    completeOnboarding,
+    isAuthenticated,
+    currentUser,
+    checkOnboarding,
+  } = useUserStore()
   const [currentStep, setCurrentStep] = useState(0)
-  const [isOpen, setIsOpen] = useState(!hasSeenOnboarding && isAuthenticated)
+  const [isOpen, setIsOpen] = useState(false)
 
-  // Sync open state with store/auth
-  if (!isOpen && !hasSeenOnboarding && isAuthenticated) {
-    setIsOpen(true)
-  }
+  // Check onboarding status on mount/auth change
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      checkOnboarding(currentUser.id).then(() => {
+        // If hasSeenOnboarding is false (from DB), show modal
+        // Note: checkOnboarding updates the store, so we check store state in next render or rely on sync
+      })
+    }
+  }, [isAuthenticated, currentUser])
+
+  useEffect(() => {
+    if (isAuthenticated && !hasSeenOnboarding) {
+      setIsOpen(true)
+    }
+  }, [hasSeenOnboarding, isAuthenticated])
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -97,17 +78,17 @@ export const OnboardingModal = () => {
     }
   }
 
-  const handleComplete = () => {
-    completeOnboarding()
+  const handleComplete = async () => {
+    await completeOnboarding()
     setIsOpen(false)
   }
 
   const step = steps[currentStep]
 
-  if (!isAuthenticated || hasSeenOnboarding) return null
+  if (!isAuthenticated) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleComplete()}>
       <DialogContent className="sm:max-w-[500px] text-center">
         <DialogHeader className="flex flex-col items-center gap-4 pt-4">
           <div className="rounded-full bg-muted p-4">{step.icon}</div>

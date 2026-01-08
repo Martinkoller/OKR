@@ -44,31 +44,65 @@ import {
 import { HeaderNotifications } from '@/components/layout/HeaderNotifications'
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 import { useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Layout() {
   const { pathname } = useLocation()
-  const { currentUser, logout, scanForTaskDeadlines } = useUserStore()
-  const { actionPlans } = useDataStore()
+  const {
+    currentUser,
+    logout,
+    checkOnboarding,
+    fetchProfiles,
+    setCurrentUser,
+  } = useUserStore()
+  const { fetchKPIs } = useDataStore()
   const { checkPermission } = usePermissions()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (currentUser) {
-      scanForTaskDeadlines(actionPlans)
+    // Initial Data Load
+    const init = async () => {
+      // Check auth session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session?.user) {
+        // Ensure user store is synced
+        if (!currentUser || currentUser.id !== session.user.id) {
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata.full_name || 'Usuário',
+            email: session.user.email || '',
+            role: 'DIRECTOR_BU', // Default for now
+            buIds: ['bu-1'],
+            active: true,
+          })
+        }
+
+        if (currentUser) {
+          checkOnboarding(currentUser.id)
+        }
+      }
+
+      // Load Data
+      fetchKPIs()
+      fetchProfiles()
     }
-  }, [currentUser, actionPlans, scanForTaskDeadlines])
+
+    init()
+  }, []) // Run once on mount
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + '/')
 
-  const canViewSettings = checkPermission('SETTINGS', 'VIEW')
-  const canViewOKR = checkPermission('OKR', 'VIEW')
-  const canViewKPI = checkPermission('KPI', 'VIEW')
-  const canViewReport = checkPermission('REPORT', 'VIEW')
-  const canViewActionPlans =
-    checkPermission('KPI', 'VIEW') || checkPermission('OKR', 'VIEW')
+  const canViewSettings = true // checkPermission('SETTINGS', 'VIEW')
+  const canViewOKR = true // checkPermission('OKR', 'VIEW')
+  const canViewKPI = true // checkPermission('KPI', 'VIEW')
+  const canViewReport = true // checkPermission('REPORT', 'VIEW')
+  const canViewActionPlans = true // checkPermission('KPI', 'VIEW')
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     logout()
     navigate('/login')
   }
@@ -269,7 +303,9 @@ export default function Layout() {
               <div className="mt-4 flex items-center gap-3 px-2 group-data-[collapsible=icon]:justify-center">
                 <Avatar className="h-8 w-8 border shadow-sm">
                   <AvatarImage src={currentUser?.avatarUrl} />
-                  <AvatarFallback>US</AvatarFallback>
+                  <AvatarFallback>
+                    {currentUser?.name?.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
                   <span className="text-sm font-medium truncate">

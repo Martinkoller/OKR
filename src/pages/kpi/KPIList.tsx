@@ -4,9 +4,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Filter, Plus } from 'lucide-react'
+import { Search, Filter, Plus, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Table,
   TableBody,
@@ -16,22 +16,24 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { usePermissions } from '@/hooks/usePermissions'
 import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
 import { BUFilter } from '@/components/dashboard/BUFilter'
 import { formatFrequency, formatNumber } from '@/lib/formatters'
 
 export const KPIList = () => {
-  const { kpis } = useDataStore()
+  const { kpis, fetchKPIs, isLoading } = useDataStore()
   const { selectedBUIds, isGlobalView, users } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const isMobile = useIsMobile()
-  const { canCreate } = usePermissions()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchKPIs()
+  }, [fetchKPIs])
 
   const isGlobal = isGlobalView()
 
-  // Filter out deleted
   const activeKPIs = kpis.filter((k) => !k.deletedAt)
 
   const filteredKPIs = activeKPIs.filter((kpi) => {
@@ -55,14 +57,19 @@ export const KPIList = () => {
         </div>
         <div className="flex gap-2">
           <BUFilter />
-          <Button variant="outline" className="hidden sm:flex">
-            <Filter className="mr-2 h-4 w-4" /> Filtros
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => fetchKPIs()}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+            />
           </Button>
-          {canCreate('KPI') && (
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Novo KPI
-            </Button>
-          )}
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Novo KPI
+          </Button>
         </div>
       </div>
 
@@ -80,7 +87,11 @@ export const KPIList = () => {
 
       <Card>
         <CardContent className="p-0">
-          {isMobile ? (
+          {isLoading && kpis.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Carregando dados...
+            </div>
+          ) : isMobile ? (
             <div className="divide-y">
               {filteredKPIs.map((kpi) => (
                 <div key={kpi.id} className="p-4 space-y-2">
@@ -113,11 +124,6 @@ export const KPIList = () => {
                   </div>
                 </div>
               ))}
-              {filteredKPIs.length === 0 && (
-                <div className="p-4 text-center text-muted-foreground">
-                  Nenhum KPI encontrado.
-                </div>
-              )}
             </div>
           ) : (
             <Table>
