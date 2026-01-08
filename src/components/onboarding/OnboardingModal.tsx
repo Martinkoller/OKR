@@ -9,14 +9,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useUserStore } from '@/stores/useUserStore'
-import {
-  Target,
-  BarChart3,
-  ClipboardList,
-  LayoutDashboard,
-  ArrowRight,
-  CheckCircle,
-} from 'lucide-react'
+import { Target, BarChart3, ArrowRight, CheckCircle } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 const steps = [
   {
@@ -49,26 +43,32 @@ export const OnboardingModal = () => {
     completeOnboarding,
     isAuthenticated,
     currentUser,
+    isOnboardingChecked,
     checkOnboarding,
   } = useUserStore()
+  const { toast } = useToast()
+
   const [currentStep, setCurrentStep] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Check onboarding status on mount/auth change
+  // Ensure onboarding status is checked when user is authenticated
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      checkOnboarding(currentUser.id).then(() => {
-        // If hasSeenOnboarding is false (from DB), show modal
-        // Note: checkOnboarding updates the store, so we check store state in next render or rely on sync
-      })
+    if (isAuthenticated && currentUser && !isOnboardingChecked) {
+      checkOnboarding(currentUser.id)
     }
-  }, [isAuthenticated, currentUser])
+  }, [isAuthenticated, currentUser, isOnboardingChecked, checkOnboarding])
 
+  // Control visibility based on store state
   useEffect(() => {
-    if (isAuthenticated && !hasSeenOnboarding) {
+    // Only open if:
+    // 1. User is authenticated
+    // 2. We have successfully checked the onboarding status (to avoid flash)
+    // 3. User has NOT seen onboarding
+    if (isAuthenticated && isOnboardingChecked && !hasSeenOnboarding) {
       setIsOpen(true)
     }
-  }, [hasSeenOnboarding, isAuthenticated])
+  }, [hasSeenOnboarding, isAuthenticated, isOnboardingChecked])
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -79,17 +79,40 @@ export const OnboardingModal = () => {
   }
 
   const handleComplete = async () => {
-    await completeOnboarding()
-    setIsOpen(false)
+    setIsLoading(true)
+    try {
+      await completeOnboarding()
+      setIsOpen(false)
+      toast({
+        title: 'Tudo pronto!',
+        description: 'Você completou o tour inicial. Bom trabalho!',
+      })
+    } catch (error) {
+      console.error('Onboarding error:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao salvar',
+        description: 'Não foi possível concluir o onboarding. Tente novamente.',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  // Prevent rendering if not ready
+  if (!isAuthenticated || !isOnboardingChecked || hasSeenOnboarding) return null
 
   const step = steps[currentStep]
 
-  if (!isAuthenticated) return null
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleComplete()}>
-      <DialogContent className="sm:max-w-[500px] text-center">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && !isLoading && handleComplete()}
+    >
+      <DialogContent
+        className="sm:max-w-[500px] text-center"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="flex flex-col items-center gap-4 pt-4">
           <div className="rounded-full bg-muted p-4">{step.icon}</div>
           <DialogTitle className="text-xl">{step.title}</DialogTitle>
@@ -107,8 +130,13 @@ export const OnboardingModal = () => {
                 Próximo <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleComplete} className="w-full sm:w-auto">
-                Começar a Usar <CheckCircle className="ml-2 h-4 w-4" />
+              <Button
+                onClick={handleComplete}
+                className="w-full sm:w-auto"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Salvando...' : 'Começar a Usar'}
+                {!isLoading && <CheckCircle className="ml-2 h-4 w-4" />}
               </Button>
             )}
           </div>

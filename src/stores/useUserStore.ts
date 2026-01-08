@@ -5,15 +5,21 @@ import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 import { profileService } from '@/services/profileService'
 import { onboardingService } from '@/services/onboardingService'
 
-// ... Keep existing interfaces ...
 interface UserState {
   isAuthenticated: boolean
   currentUser: User | null
   selectedBUIds: string[]
   bus: BU[]
   users: User[]
-  // ... other properties
+  roles: any[]
+  groups: any[]
+  notifications: any[]
+  alerts: any[]
+  notificationRules: NotificationRule[]
+  dashboardConfigs: any
+  biConfig: any
   hasSeenOnboarding: boolean
+  isOnboardingChecked: boolean
 
   // Actions
   login: (email: string) => boolean
@@ -21,13 +27,40 @@ interface UserState {
   fetchProfiles: () => Promise<void>
   checkOnboarding: (userId: string) => Promise<void>
   completeOnboarding: () => Promise<void>
-  // ... other actions
-  // Keep existing method signatures for compatibility
+
+  // Other methods
   scanForTaskDeadlines: (actionPlans: ActionPlan[]) => void
   isGlobalView: () => boolean
   setSelectedBUs: (buIds: string[]) => void
   getAllAccessibleBUIds: (userId: string) => string[]
-  // ... rest of interface
+
+  // Placeholders for compatibility
+  addNotification: (title: string, message: string) => void
+  markNotificationAsRead: (id: string) => void
+  markAlertAsRead: (id: string) => void
+  triggerSecurityAlert: () => void
+  addTaskAlert: () => void
+  notifyDeletion: () => void
+  addUser: (user: User) => void
+  updateUser: (user: User) => void
+  deleteUser: (userId: string) => void
+  addRole: (role: any) => void
+  updateRole: (role: any) => void
+  deleteRole: (roleId: string) => void
+  addGroup: (group: any) => void
+  updateGroup: (group: any) => void
+  deleteGroup: (groupId: string) => void
+  addBU: (bu: BU) => void
+  updateBU: (bu: BU) => void
+  deleteBU: (buId: string) => void
+  updateBURoles: (buId: string, roleIds: string[]) => void
+  addRule: (rule: NotificationRule) => void
+  updateRule: (rule: NotificationRule) => void
+  deleteRule: (ruleId: string) => void
+  processNotification: () => void
+  updateBIConfig: (config: any) => void
+  setCurrentUser: (user: User) => void
+  setDashboardConfig: (config: any) => void
 }
 
 export const useUserStore = create<UserState>()(
@@ -51,6 +84,7 @@ export const useUserStore = create<UserState>()(
         updatedBy: '',
       },
       hasSeenOnboarding: false,
+      isOnboardingChecked: false,
 
       login: (email) => {
         // In real app, this is handled by Supabase Auth Provider logic in App.tsx/Layout.tsx
@@ -65,7 +99,11 @@ export const useUserStore = create<UserState>()(
       },
 
       logout: () => {
-        set({ currentUser: null, isAuthenticated: false })
+        set({
+          currentUser: null,
+          isAuthenticated: false,
+          isOnboardingChecked: false,
+        })
       },
 
       fetchProfiles: async () => {
@@ -87,8 +125,17 @@ export const useUserStore = create<UserState>()(
       },
 
       checkOnboarding: async (userId) => {
-        const completed = await onboardingService.getStatus(userId)
-        set({ hasSeenOnboarding: completed })
+        try {
+          const completed = await onboardingService.getStatus(userId)
+          set({ hasSeenOnboarding: completed, isOnboardingChecked: true })
+        } catch (error) {
+          console.error('Error checking onboarding status:', error)
+          // Ensure we don't block the app if check fails, but assume not seen to be safe or true to not annoy?
+          // Let's allow retry by NOT setting checked if strictly needed,
+          // but better to set checked=true and hasSeen=false so modal might appear but allow close.
+          // However, onboardingService.getStatus returns false on error typically.
+          set({ hasSeenOnboarding: false, isOnboardingChecked: true })
+        }
       },
 
       completeOnboarding: async () => {
@@ -113,24 +160,56 @@ export const useUserStore = create<UserState>()(
       triggerSecurityAlert: () => {},
       addTaskAlert: () => {},
       notifyDeletion: () => {},
-      addUser: () => {},
-      updateUser: () => {},
-      deleteUser: () => {},
-      addRole: () => {},
-      updateRole: () => {},
-      deleteRole: () => {},
-      addGroup: () => {},
-      updateGroup: () => {},
-      deleteGroup: () => {},
-      addBU: () => {},
-      updateBU: () => {},
-      deleteBU: () => {},
+      addUser: (user) => set((state) => ({ users: [...state.users, user] })),
+      updateUser: (user) =>
+        set((state) => ({
+          users: state.users.map((u) => (u.id === user.id ? user : u)),
+        })),
+      deleteUser: (userId) =>
+        set((state) => ({ users: state.users.filter((u) => u.id !== userId) })),
+      addRole: (role) => set((state) => ({ roles: [...state.roles, role] })),
+      updateRole: (role) =>
+        set((state) => ({
+          roles: state.roles.map((r) => (r.id === role.id ? role : r)),
+        })),
+      deleteRole: (roleId) =>
+        set((state) => ({ roles: state.roles.filter((r) => r.id !== roleId) })),
+      addGroup: (group) =>
+        set((state) => ({ groups: [...state.groups, group] })),
+      updateGroup: (group) =>
+        set((state) => ({
+          groups: state.groups.map((g) => (g.id === group.id ? group : g)),
+        })),
+      deleteGroup: (groupId) =>
+        set((state) => ({
+          groups: state.groups.filter((g) => g.id !== groupId),
+        })),
+      addBU: (bu) => set((state) => ({ bus: [...state.bus, bu] })),
+      updateBU: (bu) =>
+        set((state) => ({
+          bus: state.bus.map((b) => (b.id === bu.id ? bu : b)),
+        })),
+      deleteBU: (buId) =>
+        set((state) => ({ bus: state.bus.filter((b) => b.id !== buId) })),
       updateBURoles: () => {},
-      addRule: () => {},
-      updateRule: () => {},
-      deleteRule: () => {},
+      addRule: (rule) =>
+        set((state) => ({
+          notificationRules: [...state.notificationRules, rule],
+        })),
+      updateRule: (rule) =>
+        set((state) => ({
+          notificationRules: state.notificationRules.map((r) =>
+            r.id === rule.id ? rule : r,
+          ),
+        })),
+      deleteRule: (ruleId) =>
+        set((state) => ({
+          notificationRules: state.notificationRules.filter(
+            (r) => r.id !== ruleId,
+          ),
+        })),
       processNotification: () => {},
-      updateBIConfig: () => {},
+      updateBIConfig: (config) => set({ biConfig: config }),
       setCurrentUser: (user) => set({ currentUser: user }),
       setDashboardConfig: () => {},
     }),
