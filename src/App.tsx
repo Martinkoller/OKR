@@ -30,35 +30,30 @@ import { useUserStore } from '@/stores/useUserStore'
 import { supabase } from '@/lib/supabase/client'
 
 const ProtectedRoute = () => {
-  const { isAuthenticated, authLoading } = useUserStore()
+  const { isAuthenticated } = useUserStore()
 
-  if (authLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Carregando...
-      </div>
-    )
-  }
-
+  // We rely on persisted isAuthenticated state from the store
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />
 }
 
 const AppContent = () => {
-  const { syncWithSupabase } = useUserStore()
+  // Removed syncWithSupabase as it was deprecated and caused runtime errors
+  const { fetchProfiles } = useUserStore()
 
   useEffect(() => {
-    // Initial sync
-    syncWithSupabase()
+    // Initial fetch of profiles to ensure user data is up to date
+    fetchProfiles()
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, _session) => {
-      syncWithSupabase()
+      // Sync logic can be added here if needed in the future
+      // Currently we rely on local persistence and explicit login/logout actions
     })
 
     return () => subscription.unsubscribe()
-  }, [syncWithSupabase])
+  }, [fetchProfiles])
 
   return (
     <Routes>
