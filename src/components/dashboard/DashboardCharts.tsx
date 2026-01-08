@@ -10,14 +10,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis } from 'recharts'
 import { Link } from 'react-router-dom'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +19,12 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip'
-import { ClipboardList, TrendingUp, AlertTriangle } from 'lucide-react'
+import {
+  ClipboardList,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react'
 import { KPI, ActionPlan } from '@/types'
 import { ActionPlanSummary } from '@/components/dashboard/ActionPlanSummary'
 import { formatNumber } from '@/lib/formatters'
