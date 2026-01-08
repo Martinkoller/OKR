@@ -7,7 +7,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -40,18 +39,31 @@ export const TaskAttachmentsDialog = ({
   const { toast } = useToast()
   const [isUploading, setIsUploading] = useState(false)
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setIsUploading(true)
 
-    // Simulate upload delay
-    setTimeout(() => {
+    // Helper to convert file to base64 for persistence
+    const toBase64 = (file: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = (error) => reject(error)
+      })
+
+    try {
+      const base64Url = await toBase64(file)
+
+      // Simulate network latency for better UX
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
       const newAttachment: Attachment = {
         id: `att-${Date.now()}`,
         name: file.name,
-        url: URL.createObjectURL(file), // Mock URL
+        url: base64Url, // Base64 String persists in localStorage
         type: file.type,
         size: file.size,
         uploadedAt: new Date().toISOString(),
@@ -60,12 +72,19 @@ export const TaskAttachmentsDialog = ({
       const updatedAttachments = [...(task.attachments || []), newAttachment]
       onUpdateTask({ ...task, attachments: updatedAttachments })
 
-      setIsUploading(false)
       toast({
         title: 'Arquivo anexado',
         description: `${file.name} foi adicionado com sucesso.`,
       })
-    }, 800)
+    } catch (error) {
+      toast({
+        title: 'Erro no upload',
+        description: 'Não foi possível processar o arquivo.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleDelete = (attachmentId: string) => {
