@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useUserStore } from '@/stores/useUserStore'
-import { Target, BarChart3, ArrowRight, CheckCircle } from 'lucide-react'
+import { Target, BarChart3, ArrowRight, CheckCircle, X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const steps = [
@@ -61,10 +61,6 @@ export const OnboardingModal = () => {
 
   // Control visibility based on store state
   useEffect(() => {
-    // Only open if:
-    // 1. User is authenticated
-    // 2. We have successfully checked the onboarding status (to avoid flash)
-    // 3. User has NOT seen onboarding
     if (isAuthenticated && isOnboardingChecked && !hasSeenOnboarding) {
       setIsOpen(true)
     }
@@ -99,6 +95,11 @@ export const OnboardingModal = () => {
     }
   }
 
+  const handleClose = async () => {
+    // Treat closing via X or Skip as completion
+    await handleComplete()
+  }
+
   // Prevent rendering if not ready
   if (!isAuthenticated || !isOnboardingChecked || hasSeenOnboarding) return null
 
@@ -107,12 +108,25 @@ export const OnboardingModal = () => {
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={(open) => !open && !isLoading && handleComplete()}
+      onOpenChange={(open) => {
+        if (!open && !isLoading) {
+          handleClose()
+        }
+      }}
     >
       <DialogContent
         className="sm:max-w-[500px] text-center"
         onInteractOutside={(e) => e.preventDefault()}
       >
+        {/* Explicit Close Button for clarity, though DialogContent has one usually */}
+        <button
+          onClick={handleClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Fechar</span>
+        </button>
+
         <DialogHeader className="flex flex-col items-center gap-4 pt-4">
           <div className="rounded-full bg-muted p-4">{step.icon}</div>
           <DialogTitle className="text-xl">{step.title}</DialogTitle>
@@ -124,21 +138,33 @@ export const OnboardingModal = () => {
         <div className="py-4 px-2">{step.content}</div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-center w-full">
-          <div className="flex gap-2 w-full justify-center">
-            {currentStep < steps.length - 1 ? (
-              <Button onClick={handleNext} className="w-full sm:w-auto">
-                Próximo <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleComplete}
-                className="w-full sm:w-auto"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Salvando...' : 'Começar a Usar'}
-                {!isLoading && <CheckCircle className="ml-2 h-4 w-4" />}
-              </Button>
-            )}
+          <div className="flex flex-col gap-2 w-full items-center">
+            <div className="flex gap-2 w-full justify-center">
+              {currentStep < steps.length - 1 ? (
+                <Button onClick={handleNext} className="w-full sm:w-auto">
+                  Próximo <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleComplete}
+                  className="w-full sm:w-auto"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Salvando...' : 'Começar a Usar'}
+                  {!isLoading && <CheckCircle className="ml-2 h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Pular tour
+            </Button>
           </div>
         </DialogFooter>
         <div className="flex justify-center gap-1 mt-2">

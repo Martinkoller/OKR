@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUserStore } from '@/stores/useUserStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,131 +11,108 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Target, Lock, UserCircle2 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle, Loader2 } from 'lucide-react'
+import { useUserStore } from '@/stores/useUserStore'
 
 export default function LoginPage() {
+  const navigate = useNavigate()
+  const { login } = useUserStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { login } = useUserStore()
-  const navigate = useNavigate()
-  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
 
-  const handleLogin = (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (login(email)) {
-      navigate('/')
-    } else {
-      toast({
-        title: 'Falha na autenticação',
-        description: 'Usuário não encontrado ou credenciais inválidas.',
-        variant: 'destructive',
-      })
-    }
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
 
-  const handleQuickLogin = (email: string) => {
-    setEmail(email)
-    setPassword('123')
-    if (login(email)) {
-      navigate('/')
+    try {
+      const success = await login(email, password, mode === 'signup')
+      if (success) {
+        navigate('/')
+      } else {
+        // Error is handled in store but we can set a generic one if needed
+        // The login function in store will handle Supabase interaction
+      }
+    } catch (err: any) {
+      setError(err.message || 'Ocorreu um erro. Tente novamente.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center">
-            <Target className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-[#003366]">
+    <div className="flex h-screen items-center justify-center bg-muted/40 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center text-[#003366]">
             StratManager
           </CardTitle>
-          <CardDescription>by MarteckConsultoria</CardDescription>
+          <CardDescription className="text-center">
+            {mode === 'login'
+              ? 'Entre com suas credenciais para acessar'
+              : 'Crie sua conta para começar'}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail Corporativo</Label>
-              <div className="relative">
-                <UserCircle2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu.nome@zucchetti.com"
-                  className="pl-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
-            <Button type="submit" className="w-full bg-[#003366]">
-              Entrar
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button className="w-full" type="submit" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {mode === 'login' ? 'Entrar' : 'Criar Conta'}
             </Button>
-          </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+            <div className="text-center text-sm">
+              {mode === 'login' ? (
+                <button
+                  type="button"
+                  onClick={() => setMode('signup')}
+                  className="text-primary hover:underline"
+                >
+                  Não tem uma conta? Cadastre-se
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMode('login')}
+                  className="text-primary hover:underline"
+                >
+                  Já tem uma conta? Entre
+                </button>
+              )}
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Acesso Rápido (Validação)
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              className="text-xs"
-              onClick={() => handleQuickLogin('carlos@zucchetti.com')}
-            >
-              CEO (Admin)
-            </Button>
-            <Button
-              variant="outline"
-              className="text-xs"
-              onClick={() => handleQuickLogin('ana@zucchetti.com')}
-            >
-              Diretor Varejo
-            </Button>
-            <Button
-              variant="outline"
-              className="text-xs"
-              onClick={() => handleQuickLogin('silva@zucchetti.com')}
-            >
-              GPM (Gestor)
-            </Button>
-            <Button
-              variant="outline"
-              className="text-xs"
-              onClick={() => handleQuickLogin('vicente@zucchetti.com')}
-            >
-              Viewer
-            </Button>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-center text-xs text-muted-foreground">
-          &copy; 2024 Zucchetti Brasil. Todos os direitos reservados.
-        </CardFooter>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   )
