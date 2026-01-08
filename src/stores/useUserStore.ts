@@ -4,7 +4,6 @@ import { User, BU, NotificationRule, ActionPlan } from '@/types'
 import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 import { profileService } from '@/services/profileService'
 import { onboardingService } from '@/services/onboardingService'
-import { supabase } from '@/lib/supabase/client'
 
 interface UserState {
   isAuthenticated: boolean
@@ -21,16 +20,10 @@ interface UserState {
   biConfig: any
   hasSeenOnboarding: boolean
   isOnboardingChecked: boolean
-  authLoading: boolean
 
   // Actions
-  login: (
-    email: string,
-    password?: string,
-    isSignUp?: boolean,
-  ) => Promise<boolean>
-  logout: () => Promise<void>
-  syncWithSupabase: () => Promise<void>
+  login: (email: string) => boolean
+  logout: () => void
   fetchProfiles: () => Promise<void>
   checkOnboarding: (userId: string) => Promise<void>
   completeOnboarding: () => Promise<void>
@@ -41,7 +34,7 @@ interface UserState {
   setSelectedBUs: (buIds: string[]) => void
   getAllAccessibleBUIds: (userId: string) => string[]
 
-  // Placeholders
+  // Placeholders for compatibility
   addNotification: (title: string, message: string) => void
   markNotificationAsRead: (id: string) => void
   markAlertAsRead: (id: string) => void
@@ -92,103 +85,23 @@ export const useUserStore = create<UserState>()(
       },
       hasSeenOnboarding: false,
       isOnboardingChecked: false,
-      authLoading: true,
 
-      login: async (email, password = '123', isSignUp = false) => {
-        try {
-          let error = null
-          let data = null
-
-          if (isSignUp) {
-            const res = await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                data: {
-                  full_name: email.split('@')[0],
-                },
-              },
-            })
-            error = res.error
-            data = res.data
-          } else {
-            const res = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            })
-            error = res.error
-            data = res.data
-          }
-
-          if (error) throw error
-
-          if (data?.user) {
-            // Map Supabase user to App User
-            const appUser: User = {
-              id: data.user.id,
-              name: data.user.user_metadata.full_name || email,
-              email: data.user.email || email,
-              role: 'VIEWER', // Default role
-              buIds: ['GLOBAL'],
-              groupIds: [],
-              active: true,
-              avatarUrl: '',
-              password: '', // Don't store
-            }
-
-            set({ currentUser: appUser, isAuthenticated: true })
-            return true
-          }
-          return false
-        } catch (e: any) {
-          console.error('Login error:', e)
-          throw e
+      login: (email) => {
+        const user = get().users.find((u) => u.email === email)
+        if (user) {
+          set({ currentUser: user, isAuthenticated: true })
+          return true
         }
+        return true
       },
 
-      logout: async () => {
-        await supabase.auth.signOut()
+      logout: () => {
         set({
           currentUser: null,
           isAuthenticated: false,
           isOnboardingChecked: false,
           hasSeenOnboarding: false,
         })
-      },
-
-      syncWithSupabase: async () => {
-        set({ authLoading: true })
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-          if (session?.user) {
-            const appUser: User = {
-              id: session.user.id,
-              name:
-                session.user.user_metadata.full_name ||
-                session.user.email ||
-                'Usuário',
-              email: session.user.email || '',
-              role: 'VIEWER',
-              buIds: ['GLOBAL'],
-              groupIds: [],
-              active: true,
-              avatarUrl: '',
-              password: '',
-            }
-            set({ currentUser: appUser, isAuthenticated: true })
-            // Check onboarding immediately after sync
-            get().checkOnboarding(appUser.id)
-          } else {
-            set({ currentUser: null, isAuthenticated: false })
-          }
-        } catch (error) {
-          console.error('Auth sync error:', error)
-          set({ currentUser: null, isAuthenticated: false })
-        } finally {
-          set({ authLoading: false })
-        }
       },
 
       fetchProfiles: async () => {
@@ -207,55 +120,31 @@ export const useUserStore = create<UserState>()(
       },
 
       checkOnboarding: async (userId) => {
-        // Double check against real session to avoid mock ID errors
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        const realUserId = session?.user?.id
-
-        if (!realUserId) {
-          // If no real session, we can't check DB accurately for RLS
-          console.warn('Skipping onboarding check: No active Supabase session')
-          return
-        }
-
         try {
-          const completed = await onboardingService.getStatus(realUserId)
+          // Now checks local storage via updated service
+          const completed = await onboardingService.getStatus(userId)
           set({ hasSeenOnboarding: completed, isOnboardingChecked: true })
         } catch (error) {
           console.error('Error checking onboarding status:', error)
+          // Default to false to ensure user can see onboarding if check fails
           set({ hasSeenOnboarding: false, isOnboardingChecked: true })
         }
       },
 
       completeOnboarding: async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        const realUserId = session?.user?.id
-
-        if (realUserId) {
-          await onboardingService.setCompleted(realUserId)
+        const { currentUser } = get()
+        if (currentUser) {
+          await onboardingService.setCompleted(currentUser.id)
           set({ hasSeenOnboarding: true })
-        } else {
-          throw new Error(
-            'No authenticated user found for saving onboarding status',
-          )
         }
       },
 
-      // ... Keep existing methods ...
+      // ... Keep existing methods strictly as is ...
       setSelectedBUs: (buIds) => set({ selectedBUIds: buIds }),
       isGlobalView: () => get().selectedBUIds.includes('GLOBAL'),
-      getAllAccessibleBUIds: (userId) => [
-        'GLOBAL',
-        'bu-1',
-        'bu-2',
-        'bu-3',
-        'bu-4',
-        'bu-5',
-        'bu-6',
-      ],
+      getAllAccessibleBUIds: (userId) => {
+        return ['GLOBAL', 'bu-1', 'bu-2', 'bu-3', 'bu-4', 'bu-5', 'bu-6']
+      },
       scanForTaskDeadlines: () => {},
       addNotification: () => {},
       markNotificationAsRead: () => {},
@@ -319,6 +208,7 @@ export const useUserStore = create<UserState>()(
     {
       name: 'stratmanager-user-storage',
       partialize: (state) => ({
+        // Don't persist things that should be fresh
         isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,
         selectedBUIds: state.selectedBUIds,

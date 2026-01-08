@@ -1,31 +1,23 @@
-import { supabase } from '@/lib/supabase/client'
+const ONBOARDING_KEY_PREFIX = 'stratmanager_onboarding_completed_'
 
 export const onboardingService = {
   async getStatus(userId: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('user_onboarding')
-      .select('completed')
-      .eq('user_id', userId)
-      .single()
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching onboarding status:', error)
+    try {
+      const key = `${ONBOARDING_KEY_PREFIX}${userId}`
+      const item = localStorage.getItem(key)
+      return item === 'true'
+    } catch (error) {
+      console.error('Error reading onboarding status from localStorage:', error)
       return false
     }
-
-    return data?.completed || false
   },
 
   async setCompleted(userId: string): Promise<void> {
-    const { error } = await supabase.from('user_onboarding').upsert(
-      {
-        user_id: userId,
-        completed: true,
-        completed_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    )
-
-    if (error) throw error
+    try {
+      const key = `${ONBOARDING_KEY_PREFIX}${userId}`
+      localStorage.setItem(key, 'true')
+    } catch (error) {
+      console.error('Error saving onboarding status to localStorage:', error)
+    }
   },
 }
