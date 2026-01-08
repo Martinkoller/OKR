@@ -5,15 +5,15 @@ export type BU = {
   name: string
   description?: string
   slug: string
-  parentId?: string | null // For hierarchy
-  roleIds?: string[] // Roles inherited by members of this BU
+  parentId?: string | null
+  roleIds?: string[]
 }
 
 export type Group = {
   id: string
   name: string
   description: string
-  roleIds: string[] // Roles inherited by members of this Group
+  roleIds: string[]
   createdAt: string
   updatedAt: string
 }
@@ -30,13 +30,13 @@ export type User = {
   id: string
   name: string
   email: string
-  password?: string // Mock password for validation
-  role: Role // Direct role
-  buIds: string[] // User can belong to multiple BUs
-  groupIds?: string[] // User can belong to multiple Access Groups
+  password?: string
+  role: Role
+  buIds: string[]
+  groupIds?: string[]
   avatarUrl?: string
   active: boolean
-  extraPermissions?: Partial<Record<PermissionModule, PermissionAction[]>> // Granular overrides
+  extraPermissions?: Partial<Record<PermissionModule, PermissionAction[]>>
 }
 
 export type RoleDefinition = {
@@ -53,11 +53,11 @@ export type KPIStatus = 'GREEN' | 'YELLOW' | 'RED'
 export type KPITrend = 'UP' | 'DOWN' | 'STABLE'
 
 export type KPIHistoryEntry = {
-  date: string // ISO Date Reference
+  date: string
   value: number
   comment?: string
   updatedByUserId: string
-  timestamp: string // Creation Timestamp
+  timestamp: string
 }
 
 export type KPI = {
@@ -70,15 +70,26 @@ export type KPI = {
   type: KPIType
   unit: string
   goal: number
-  weight: number // 0-100 relative to OKR
+  weight: number
   currentValue: number
   status: KPIStatus
   lastUpdated: string
   history: KPIHistoryEntry[]
-  deletedAt?: string // Soft Delete
+  deletedAt?: string
 }
 
 export type OKRScope = 'ANNUAL' | 'MULTI_YEAR'
+
+export type KeyResult = {
+  id: string
+  okrId: string
+  title: string
+  targetValue: number
+  currentValue: number
+  unit: string
+  createdAt: string
+  updatedAt: string
+}
 
 export type OKR = {
   id: string
@@ -86,14 +97,17 @@ export type OKR = {
   description?: string
   buId: string
   scope: OKRScope
-  startYear: number
-  endYear: number
-  weight: number // Strategic Weight 1-5 or 1-100
+  startDate?: string
+  endDate?: string
+  startYear: number // Derived or legacy for UI compatibility
+  endYear: number // Derived or legacy for UI compatibility
+  weight: number
   ownerId: string
-  kpiIds: string[]
-  progress: number // 0-100
+  kpiIds: string[] // Kept for backward compat / hybrid model
+  keyResults?: KeyResult[] // New native key results
+  progress: number
   status: KPIStatus
-  deletedAt?: string // Soft Delete
+  deletedAt?: string
 }
 
 export type ActionPlanStatus =
@@ -116,7 +130,7 @@ export type ActionPlanTask = {
   id: string
   description: string
   ownerId: string
-  deadline: string // ISO Date
+  deadline: string
   status: TaskStatus
   attachments?: Attachment[]
 }
@@ -125,16 +139,16 @@ export type ActionPlan = {
   id: string
   title: string
   description: string
-  entityId: string // KPI ID or OKR ID (Primary)
+  entityId: string
   entityType: 'KPI' | 'OKR'
   status: ActionPlanStatus
-  dueDate: string // ISO Date
+  dueDate: string
   ownerId: string
   tasks: ActionPlanTask[]
   createdAt: string
   updatedAt: string
-  linkedKpiIds?: string[] // Additional linked KPIs
-  linkedOkrIds?: string[] // Additional linked OKRs
+  linkedKpiIds?: string[]
+  linkedOkrIds?: string[]
 }
 
 export type AuditEntity =
@@ -176,7 +190,7 @@ export type TriggerCondition =
   | 'STATUS_CHANGE'
   | 'STATUS_RED'
   | 'RETROACTIVE_EDIT'
-  | 'THRESHOLD' // Added for custom alerts
+  | 'THRESHOLD'
 export type NotificationChannel = 'PORTAL' | 'EMAIL'
 export type NotificationTargetType = 'KPI' | 'OKR' | 'ALL'
 export type AlertOperator = 'GREATER_THAN' | 'LESS_THAN' | 'EQUALS'
@@ -186,17 +200,16 @@ export type NotificationRule = {
   userId: string
   name: string
   buId: string | 'ALL'
-  targetType?: NotificationTargetType // 'KPI' | 'OKR' | 'ALL'
+  targetType?: NotificationTargetType
   kpiType: 'ALL' | 'QUANT' | 'QUAL'
   triggerCondition: TriggerCondition
   threshold?: number
   operator?: AlertOperator
-  targetEntityId?: string // If set, applies only to this specific entity
+  targetEntityId?: string
   channels: NotificationChannel[]
   isActive: boolean
 }
 
-// New Types for Templates and Alerts
 export type TemplateType = 'OKR' | 'KPI'
 
 export interface Template {
@@ -204,15 +217,12 @@ export interface Template {
   type: TemplateType
   title: string
   description: string
-  formula?: string // Added for advanced templates
-  // KPI Specifics
+  formula?: string
   frequency?: KPIFrequency
   kpiType?: KPIType
   unit?: string
   suggestedGoal?: number
-  // OKR Specifics
   scope?: OKRScope
-  // Common
   suggestedMetrics?: string[]
 }
 
@@ -226,8 +236,8 @@ export interface Alert {
   message: string
   timestamp: string
   read: boolean
-  severity?: SecuritySeverity // Only for security
-  link?: string // Optional link to entity
+  severity?: SecuritySeverity
+  link?: string
 }
 
 export interface DashboardConfig {

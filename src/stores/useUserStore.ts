@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User, BU, NotificationRule, ActionPlan } from '@/types'
-import { MOCK_BUS, MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
+import { MOCK_USERS, MOCK_ROLES, MOCK_GROUPS } from '@/data/mockData'
 import { profileService } from '@/services/profileService'
 import { onboardingService } from '@/services/onboardingService'
+import { buService } from '@/services/buService'
 
 interface UserState {
   isAuthenticated: boolean
@@ -21,20 +22,18 @@ interface UserState {
   hasSeenOnboarding: boolean
   isOnboardingChecked: boolean
 
-  // Actions
   login: (email: string) => boolean
   logout: () => void
   fetchProfiles: () => Promise<void>
+  fetchBUs: () => Promise<void>
   checkOnboarding: (userId: string) => Promise<void>
   completeOnboarding: () => Promise<void>
 
-  // Other methods
   scanForTaskDeadlines: (actionPlans: ActionPlan[]) => void
   isGlobalView: () => boolean
   setSelectedBUs: (buIds: string[]) => void
   getAllAccessibleBUIds: (userId: string) => string[]
 
-  // Placeholders for compatibility
   addNotification: (title: string, message: string) => void
   markNotificationAsRead: (id: string) => void
   markAlertAsRead: (id: string) => void
@@ -50,9 +49,9 @@ interface UserState {
   addGroup: (group: any) => void
   updateGroup: (group: any) => void
   deleteGroup: (groupId: string) => void
-  addBU: (bu: BU) => void
-  updateBU: (bu: BU) => void
-  deleteBU: (buId: string) => void
+  addBU: (bu: BU) => Promise<void>
+  updateBU: (bu: BU) => Promise<void>
+  deleteBU: (buId: string) => Promise<void>
   updateBURoles: (buId: string, roleIds: string[]) => void
   addRule: (rule: NotificationRule) => void
   updateRule: (rule: NotificationRule) => void
@@ -69,7 +68,7 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       currentUser: null,
       selectedBUIds: ['GLOBAL'],
-      bus: MOCK_BUS,
+      bus: [], // Intentionally empty initially, to be fetched
       users: MOCK_USERS,
       roles: MOCK_ROLES,
       groups: MOCK_GROUPS,
@@ -119,14 +118,20 @@ export const useUserStore = create<UserState>()(
         }
       },
 
+      fetchBUs: async () => {
+        try {
+          const bus = await buService.fetchBUs()
+          set({ bus })
+        } catch (e) {
+          console.error('Error fetching BUs', e)
+        }
+      },
+
       checkOnboarding: async (userId) => {
         try {
-          // Now checks local storage via updated service
           const completed = await onboardingService.getStatus(userId)
           set({ hasSeenOnboarding: completed, isOnboardingChecked: true })
         } catch (error) {
-          console.error('Error checking onboarding status:', error)
-          // Default to false to ensure user can see onboarding if check fails
           set({ hasSeenOnboarding: false, isOnboardingChecked: true })
         }
       },
@@ -139,12 +144,12 @@ export const useUserStore = create<UserState>()(
         }
       },
 
-      // ... Keep existing methods strictly as is ...
       setSelectedBUs: (buIds) => set({ selectedBUIds: buIds }),
       isGlobalView: () => get().selectedBUIds.includes('GLOBAL'),
       getAllAccessibleBUIds: (userId) => {
-        return ['GLOBAL', 'bu-1', 'bu-2', 'bu-3', 'bu-4', 'bu-5', 'bu-6']
+        return ['GLOBAL', ...get().bus.map((b) => b.id)]
       },
+
       scanForTaskDeadlines: () => {},
       addNotification: () => {},
       markNotificationAsRead: () => {},
@@ -176,13 +181,32 @@ export const useUserStore = create<UserState>()(
         set((state) => ({
           groups: state.groups.filter((g) => g.id !== groupId),
         })),
-      addBU: (bu) => set((state) => ({ bus: [...state.bus, bu] })),
-      updateBU: (bu) =>
-        set((state) => ({
-          bus: state.bus.map((b) => (b.id === bu.id ? bu : b)),
-        })),
-      deleteBU: (buId) =>
-        set((state) => ({ bus: state.bus.filter((b) => b.id !== buId) })),
+
+      addBU: async (bu) => {
+        try {
+          await buService.createBU(bu)
+          await get().fetchBUs()
+        } catch (e) {
+          console.error(e)
+        }
+      },
+      updateBU: async (bu) => {
+        try {
+          await buService.updateBU(bu)
+          await get().fetchBUs()
+        } catch (e) {
+          console.error(e)
+        }
+      },
+      deleteBU: async (buId) => {
+        try {
+          await buService.deleteBU(buId)
+          await get().fetchBUs()
+        } catch (e) {
+          console.error(e)
+        }
+      },
+
       updateBURoles: () => {},
       addRule: (rule) =>
         set((state) => ({
@@ -208,7 +232,6 @@ export const useUserStore = create<UserState>()(
     {
       name: 'stratmanager-user-storage',
       partialize: (state) => ({
-        // Don't persist things that should be fresh
         isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,
         selectedBUIds: state.selectedBUIds,

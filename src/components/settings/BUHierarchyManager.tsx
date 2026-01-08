@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
 import {
@@ -40,7 +40,8 @@ import { BU } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
 export const BUHierarchyManager = () => {
-  const { bus, addBU, updateBU, deleteBU, currentUser } = useUserStore()
+  const { bus, addBU, updateBU, deleteBU, currentUser, fetchBUs } =
+    useUserStore()
   const { addAuditEntry } = useDataStore()
   const { toast } = useToast()
 
@@ -50,6 +51,10 @@ export const BUHierarchyManager = () => {
   const [description, setDescription] = useState('')
   const [slug, setSlug] = useState('')
   const [parentId, setParentId] = useState<string>('none')
+
+  useEffect(() => {
+    fetchBUs()
+  }, [fetchBUs])
 
   const handleCreate = () => {
     setEditingBU(undefined)
@@ -69,8 +74,7 @@ export const BUHierarchyManager = () => {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (buId: string) => {
-    // Prevent delete if has children
+  const handleDelete = async (buId: string) => {
     const hasChildren = bus.some((b) => b.parentId === buId)
     if (hasChildren) {
       toast({
@@ -82,7 +86,7 @@ export const BUHierarchyManager = () => {
     }
 
     if (confirm('Tem certeza que deseja excluir esta Unidade?')) {
-      deleteBU(buId)
+      await deleteBU(buId)
       if (currentUser) {
         addAuditEntry({
           entityId: buId,
@@ -96,7 +100,7 @@ export const BUHierarchyManager = () => {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || !slug) {
       toast({
         title: 'Campos Obrigatórios',
@@ -107,7 +111,7 @@ export const BUHierarchyManager = () => {
     }
 
     const buData: BU = {
-      id: editingBU?.id || `bu-${Date.now()}`,
+      id: editingBU?.id || '',
       name,
       description,
       slug,
@@ -116,7 +120,7 @@ export const BUHierarchyManager = () => {
     }
 
     if (editingBU) {
-      updateBU(buData)
+      await updateBU(buData)
       if (currentUser) {
         addAuditEntry({
           entityId: buData.id,
@@ -128,10 +132,10 @@ export const BUHierarchyManager = () => {
       }
       toast({ title: 'Unidade atualizada' })
     } else {
-      addBU(buData)
+      await addBU(buData)
       if (currentUser) {
         addAuditEntry({
-          entityId: buData.id,
+          entityId: 'new', // will be generated
           entityType: 'BU',
           action: 'CREATE',
           reason: `Nova BU "${name}" criada`,
@@ -143,7 +147,6 @@ export const BUHierarchyManager = () => {
     setIsDialogOpen(false)
   }
 
-  // Recursive render for tree structure
   const renderRows = (parentId: string | null, depth: number = 0) => {
     const children = bus.filter(
       (b) =>
@@ -179,7 +182,7 @@ export const BUHierarchyManager = () => {
           <TableCell>
             {bu.parentId ? (
               <Badge variant="outline" className="text-xs">
-                {bus.find((b) => b.id === bu.parentId)?.name}
+                {bus.find((b) => b.id === bu.parentId)?.name || '...'}
               </Badge>
             ) : (
               <Badge variant="secondary" className="text-xs">
@@ -221,8 +224,7 @@ export const BUHierarchyManager = () => {
               <FolderTree className="h-5 w-5" /> Estrutura Organizacional
             </CardTitle>
             <CardDescription>
-              Gerencie a hierarquia de Unidades de Negócio. Permissões são
-              herdadas de unidades pai para filhas.
+              Gerencie a hierarquia de Unidades de Negócio.
             </CardDescription>
           </div>
           <Button onClick={handleCreate}>
@@ -236,11 +238,21 @@ export const BUHierarchyManager = () => {
             <TableRow>
               <TableHead>Unidade de Negócio</TableHead>
               <TableHead>Código</TableHead>
-              <TableHead>Reporta para (Pai)</TableHead>
+              <TableHead>Reporta para</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>{renderRows(null)}</TableBody>
+          <TableBody>
+            {bus.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8">
+                  Nenhuma unidade encontrada.
+                </TableCell>
+              </TableRow>
+            ) : (
+              renderRows(null)
+            )}
+          </TableBody>
         </Table>
       </CardContent>
 
@@ -277,7 +289,7 @@ export const BUHierarchyManager = () => {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Unidade Pai (Hierarquia)</Label>
+              <Label>Unidade Pai</Label>
               <Select value={parentId} onValueChange={setParentId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
@@ -285,7 +297,7 @@ export const BUHierarchyManager = () => {
                 <SelectContent>
                   <SelectItem value="none">Nenhuma (Raiz)</SelectItem>
                   {bus
-                    .filter((b) => b.id !== editingBU?.id) // Prevent self-parenting
+                    .filter((b) => b.id !== editingBU?.id)
                     .map((b) => (
                       <SelectItem key={b.id} value={b.id}>
                         {b.name}
