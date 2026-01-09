@@ -106,10 +106,10 @@ export const BUHierarchyManager = () => {
           })
         }
         toast({ title: 'Unidade removida' })
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: 'Erro',
-          description: 'Não foi possível excluir a unidade.',
+          description: error.message || 'Não foi possível excluir a unidade.',
           variant: 'destructive',
         })
       }
@@ -131,9 +131,9 @@ export const BUHierarchyManager = () => {
       id: editingBU?.id || '',
       name,
       description,
-      slug,
+      slug: slug.toLowerCase().trim(),
       parentId: parentId === 'none' ? null : parentId,
-      roleIds: editingBU?.roleIds || [],
+      roleIds: [], // Not used by backend but kept for type compat
     }
 
     try {
@@ -163,10 +163,11 @@ export const BUHierarchyManager = () => {
         toast({ title: 'Unidade criada' })
       }
       setIsDialogOpen(false)
-    } catch (error) {
+    } catch (error: any) {
+      console.error(error)
       toast({
         title: 'Erro',
-        description: 'Não foi possível salvar a unidade.',
+        description: error.message || 'Não foi possível salvar a unidade.',
         variant: 'destructive',
       })
     } finally {

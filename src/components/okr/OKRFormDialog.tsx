@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -111,9 +110,10 @@ export const OKRFormDialog = ({
   }, [open, form, currentYear, currentUser, okrToEdit])
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!currentUser) return
+
     setIsSubmitting(true)
-    const okrData: OKR = {
-      id: okrToEdit?.id || '',
+    const okrData: any = {
       title: values.title,
       description: values.description || '',
       buId: values.buId,
@@ -125,28 +125,32 @@ export const OKRFormDialog = ({
       weight: values.weight,
       ownerId: values.ownerId,
       kpiIds: [],
-      progress: okrToEdit?.progress || 0,
-      status: okrToEdit?.status || 'DRAFT',
     }
 
     try {
-      if (currentUser) {
-        if (okrToEdit) {
-          await updateOKR(okrData, currentUser.id)
-          toast({
-            title: 'OKR Atualizado',
-            description: 'As alterações foram salvas com sucesso.',
-          })
-        } else {
-          await addOKR(okrData, currentUser.id)
-          toast({
-            title: 'OKR Criado',
-            description: `O objetivo "${values.title}" foi criado com sucesso.`,
-          })
-        }
-        onOpenChange(false)
-        onSuccess?.()
+      if (okrToEdit) {
+        await updateOKR(
+          {
+            ...okrData,
+            id: okrToEdit.id,
+            progress: okrToEdit.progress,
+            status: okrToEdit.status,
+          },
+          currentUser.id,
+        )
+        toast({
+          title: 'OKR Atualizado',
+          description: 'As alterações foram salvas com sucesso.',
+        })
+      } else {
+        await addOKR({ ...okrData, progress: 0 }, currentUser.id)
+        toast({
+          title: 'OKR Criado',
+          description: `O objetivo "${values.title}" foi criado com sucesso.`,
+        })
       }
+      onOpenChange(false)
+      onSuccess?.()
     } catch (error) {
       toast({
         title: 'Erro',

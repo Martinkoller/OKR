@@ -45,12 +45,13 @@ export const okrService = {
 
     if (error) throw error
 
+    // Insert Key Results if any
     if (okr.keyResults && okr.keyResults.length > 0) {
       const krs = okr.keyResults.map((kr) => ({
         okr_id: data.id,
         title: kr.title,
         target_value: kr.targetValue,
-        current_value: kr.currentValue,
+        current_value: kr.currentValue || 0,
         unit: kr.unit,
       }))
       const { error: krError } = await supabase.from('key_results').insert(krs)
@@ -79,6 +80,9 @@ export const okrService = {
       .eq('id', okr.id!)
 
     if (error) throw error
+
+    // Note: Key Results update logic would go here if we were editing KRs in bulk.
+    // For now, we assume KRs are managed separately or not updated via this partial update.
   },
 
   async deleteOKR(id: string): Promise<void> {
@@ -119,7 +123,7 @@ function mapToOKR(o: any): OKR {
     weight: Number(o.weight),
     status: o.status as any,
     progress: Number(o.progress),
-    kpiIds: [],
+    kpiIds: [], // Legacy support
     keyResults: o.key_results
       ? o.key_results.map((kr: any) => ({
           id: kr.id,

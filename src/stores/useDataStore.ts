@@ -25,6 +25,7 @@ interface DataState {
   fetchOKRs: () => Promise<void>
   fetchRecycleBin: () => Promise<void>
 
+  // Updates KPI Measurement (History)
   updateKPI: (
     kpiId: string,
     value: number,
@@ -34,6 +35,9 @@ interface DataState {
     reason?: string,
     referenceDate?: string,
   ) => Promise<void>
+
+  // Updates KPI Metadata (Name, Target, etc)
+  editKPI: (kpi: Partial<KPI>, userId: string) => Promise<void>
 
   deleteKPIMeasurement: (
     kpiId: string,
@@ -113,6 +117,7 @@ export const useDataStore = create<DataState>()(
         }
       },
 
+      // Use this to add a measurement value
       updateKPI: async (
         kpiId,
         value,
@@ -137,6 +142,24 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to update KPI:', error)
+          throw error
+        }
+      },
+
+      // Use this to edit KPI definitions
+      editKPI: async (kpi, userId) => {
+        try {
+          await kpiService.updateKPI(kpi)
+          await get().fetchKPIs()
+          get().addAuditEntry({
+            entityId: kpi.id!,
+            entityType: 'KPI',
+            action: 'UPDATE',
+            reason: `KPI Updated: ${kpi.name}`,
+            userId,
+          })
+        } catch (error) {
+          console.error('Failed to edit KPI:', error)
           throw error
         }
       },
@@ -182,6 +205,8 @@ export const useDataStore = create<DataState>()(
 
       updateOKR: async (okr, userId) => {
         try {
+          // If KPI links are changed or progress is manual, we might recalculate here
+          // For now we assume OKR object passed has correct data
           const { progress, status } = calculateOKRProgress(okr, get().kpis)
           const okrToUpdate = { ...okr, progress, status }
 

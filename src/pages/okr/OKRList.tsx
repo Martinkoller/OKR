@@ -6,20 +6,34 @@ import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Plus, CalendarRange, Clock, RefreshCw } from 'lucide-react'
+import {
+  Search,
+  Plus,
+  CalendarRange,
+  Clock,
+  RefreshCw,
+  Edit2,
+  Trash2,
+  Loader2,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { OKR } from '@/types'
 import { usePermissions } from '@/hooks/usePermissions'
 import { OKRFormDialog } from '@/components/okr/OKRFormDialog'
 import { BUFilter } from '@/components/dashboard/BUFilter'
+import { useToast } from '@/hooks/use-toast'
 
 export const OKRList = () => {
-  const { okrs, fetchOKRs, isLoading } = useDataStore()
-  const { selectedBUIds, isGlobalView } = useUserStore()
+  const { okrs, fetchOKRs, isLoading, deleteOKR } = useDataStore()
+  const { selectedBUIds, isGlobalView, currentUser } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
-  const { canCreate } = usePermissions()
+  const { canCreate, canEdit, canDelete } = usePermissions()
+  const { toast } = useToast()
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingOKR, setEditingOKR] = useState<OKR | undefined>(undefined)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOKRs()
@@ -42,6 +56,35 @@ export const OKRList = () => {
     return b.startYear - a.startYear
   })
 
+  const handleCreate = () => {
+    setEditingOKR(undefined)
+    setIsDialogOpen(true)
+  }
+
+  const handleEdit = (okr: OKR) => {
+    setEditingOKR(okr)
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (okrId: string) => {
+    if (!currentUser) return
+    if (!confirm('Tem certeza que deseja excluir este OKR?')) return
+
+    setIsDeleting(okrId)
+    try {
+      await deleteOKR(okrId, currentUser.id)
+      toast({ title: 'OKR removido com sucesso.' })
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o OKR.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(null)
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -62,7 +105,7 @@ export const OKRList = () => {
             />
           </Button>
           {canCreate('OKR') && (
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" /> Novo OKR
             </Button>
           )}
@@ -84,11 +127,15 @@ export const OKRList = () => {
       <div className="grid gap-6">
         {isLoading && okrs.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
             Carregando OKRs...
           </div>
         ) : (
           sortedOKRs.map((okr: OKR) => (
-            <Card key={okr.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={okr.id}
+              className="hover:shadow-md transition-shadow group"
+            >
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex-1 space-y-2">
@@ -114,12 +161,40 @@ export const OKRList = () => {
                         Peso {okr.weight}
                       </span>
                     </div>
-                    <Link
-                      to={`/okrs/${okr.id}`}
-                      className="text-lg font-bold text-gray-900 hover:text-[#003366]"
-                    >
-                      {okr.title}
-                    </Link>
+                    <div className="flex justify-between items-start">
+                      <Link
+                        to={`/okrs/${okr.id}`}
+                        className="text-lg font-bold text-gray-900 hover:text-[#003366]"
+                      >
+                        {okr.title}
+                      </Link>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canEdit('OKR') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(okr)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete('OKR') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDelete(okr.id)}
+                            disabled={isDeleting === okr.id}
+                          >
+                            {isDeleting === okr.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-600 max-w-2xl">
                       {okr.description}
                     </p>
@@ -152,6 +227,7 @@ export const OKRList = () => {
       <OKRFormDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        okrToEdit={editingOKR}
         onSuccess={() => fetchOKRs()}
       />
     </div>

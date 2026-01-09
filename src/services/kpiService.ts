@@ -8,6 +8,7 @@ export const kpiService = {
       .from('kpis')
       .select('*')
       .is('deleted_at', null)
+      .order('name', { ascending: true })
 
     if (kpiError) throw kpiError
 
@@ -109,7 +110,7 @@ export const kpiService = {
 }
 
 async function fetchMeasurementsAndMap(kpis: any[]): Promise<KPI[]> {
-  if (kpis.length === 0) return []
+  if (!kpis || kpis.length === 0) return []
 
   const kpiIds = kpis.map((k) => k.id)
 
@@ -122,7 +123,7 @@ async function fetchMeasurementsAndMap(kpis: any[]): Promise<KPI[]> {
   if (measError) throw measError
 
   return kpis.map((k) => {
-    const history: KPIHistoryEntry[] = measurements
+    const history: KPIHistoryEntry[] = (measurements || [])
       .filter((m) => m.kpi_id === k.id)
       .map((m) => ({
         date: m.recorded_at,

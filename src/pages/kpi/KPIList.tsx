@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Filter, Plus, RefreshCw } from 'lucide-react'
+import { Search, Plus, RefreshCw, Edit2, Trash2, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
@@ -19,21 +19,27 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { KPIFormDialog } from '@/components/kpi/KPIFormDialog'
 import { BUFilter } from '@/components/dashboard/BUFilter'
 import { formatFrequency, formatNumber } from '@/lib/formatters'
+import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/usePermissions'
+import { KPI } from '@/types'
 
 export const KPIList = () => {
-  const { kpis, fetchKPIs, isLoading } = useDataStore()
-  const { selectedBUIds, isGlobalView, users } = useUserStore()
+  const { kpis, fetchKPIs, isLoading, deleteKPI } = useDataStore()
+  const { selectedBUIds, isGlobalView, users, currentUser } = useUserStore()
   const [searchTerm, setSearchTerm] = useState('')
   const isMobile = useIsMobile()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { toast } = useToast()
+  const { canEdit, canDelete, canCreate } = usePermissions()
 
-  // Fetch on mount
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingKPI, setEditingKPI] = useState<KPI | undefined>(undefined)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+
   useEffect(() => {
     fetchKPIs()
   }, [fetchKPIs])
 
   const isGlobal = isGlobalView()
-
   const activeKPIs = kpis.filter((k) => !k.deletedAt)
 
   const filteredKPIs = activeKPIs.filter((kpi) => {
@@ -46,6 +52,35 @@ export const KPIList = () => {
 
   const getOwnerName = (ownerId: string) => {
     return users.find((u) => u.id === ownerId)?.name || ownerId
+  }
+
+  const handleEdit = (kpi: KPI) => {
+    setEditingKPI(kpi)
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (kpiId: string) => {
+    if (!currentUser) return
+    if (!confirm('Tem certeza que deseja excluir este KPI?')) return
+
+    setIsDeleting(kpiId)
+    try {
+      await deleteKPI(kpiId, currentUser.id)
+      toast({ title: 'KPI removido com sucesso.' })
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o KPI.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(null)
+    }
+  }
+
+  const handleCreate = () => {
+    setEditingKPI(undefined)
+    setIsDialogOpen(true)
   }
 
   return (
@@ -67,9 +102,11 @@ export const KPIList = () => {
               className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
             />
           </Button>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Novo KPI
-          </Button>
+          {canCreate('KPI') && (
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" /> Novo KPI
+            </Button>
+          )}
         </div>
       </div>
 
@@ -89,6 +126,7 @@ export const KPIList = () => {
         <CardContent className="p-0">
           {isLoading && kpis.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
               Carregando dados...
             </div>
           ) : isMobile ? (
@@ -102,7 +140,19 @@ export const KPIList = () => {
                     >
                       {kpi.name}
                     </Link>
-                    <StatusBadge status={kpi.status} className="text-xs" />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={kpi.status} className="text-xs" />
+                      {canEdit('KPI') && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleEdit(kpi)}
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="text-sm text-gray-500 grid grid-cols-2 gap-2">
                     <div>
@@ -166,9 +216,38 @@ export const KPIList = () => {
                       <StatusBadge status={kpi.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/kpis/${kpi.id}`}>Detalhes</Link>
-                      </Button>
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/kpis/${kpi.id}`}>
+                            <span className="sr-only">Ver</span>
+                            <Search className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        {canEdit('KPI') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(kpi)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete('KPI') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDelete(kpi.id)}
+                            disabled={isDeleting === kpi.id}
+                          >
+                            {isDeleting === kpi.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -191,7 +270,8 @@ export const KPIList = () => {
       <KPIFormDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onSuccess={() => {}}
+        kpiToEdit={editingKPI}
+        onSuccess={() => fetchKPIs()}
       />
     </div>
   )

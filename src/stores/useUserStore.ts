@@ -183,7 +183,6 @@ export const useUserStore = create<UserState>()(
         })),
 
       addBU: async (bu) => {
-        // Rethrowing error for UI handling
         try {
           await buService.createBU(bu)
           await get().fetchBUs()

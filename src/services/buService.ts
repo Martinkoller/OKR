@@ -16,18 +16,21 @@ export const buService = {
       description: bu.description || '',
       slug: bu.slug || '',
       parentId: bu.parent_id,
-      roleIds: [],
+      roleIds: [], // Not yet implemented in DB
     }))
   },
 
   async createBU(bu: Partial<BU>): Promise<BU> {
+    // Ensure parentId is null if not provided or empty
+    const parentId = bu.parentId || null
+
     const { data, error } = await supabase
       .from('business_units')
       .insert({
         name: bu.name!,
         description: bu.description,
         slug: bu.slug,
-        parent_id: bu.parentId,
+        parent_id: parentId,
       })
       .select()
       .single()
@@ -45,13 +48,15 @@ export const buService = {
   },
 
   async updateBU(bu: Partial<BU>): Promise<void> {
+    const parentId = bu.parentId || null
+
     const { error } = await supabase
       .from('business_units')
       .update({
         name: bu.name,
         description: bu.description,
         slug: bu.slug,
-        parent_id: bu.parentId,
+        parent_id: parentId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', bu.id!)
