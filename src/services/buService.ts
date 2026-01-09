@@ -8,7 +8,10 @@ export const buService = {
       .select('*')
       .order('name', { ascending: true })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error fetching BUs:', error)
+      throw new Error(`Failed to fetch Business Units: ${error.message}`)
+    }
 
     return data.map((bu) => ({
       id: bu.id,
@@ -35,7 +38,10 @@ export const buService = {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Error creating BU:', error)
+      throw new Error(`Failed to create Business Unit: ${error.message}`)
+    }
 
     return {
       id: data.id,
@@ -61,7 +67,10 @@ export const buService = {
       })
       .eq('id', bu.id!)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error updating BU:', error)
+      throw new Error(`Failed to update Business Unit: ${error.message}`)
+    }
   },
 
   async deleteBU(id: string): Promise<void> {
@@ -69,6 +78,10 @@ export const buService = {
       .from('business_units')
       .delete()
       .eq('id', id)
-    if (error) throw error
+
+    if (error) {
+      console.error('Error deleting BU:', error)
+      throw new Error(`Failed to delete Business Unit: ${error.message}`)
+    }
   },
 }

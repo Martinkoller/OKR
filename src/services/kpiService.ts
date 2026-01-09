@@ -10,7 +10,10 @@ export const kpiService = {
       .is('deleted_at', null)
       .order('name', { ascending: true })
 
-    if (kpiError) throw kpiError
+    if (kpiError) {
+      console.error('Error fetching KPIs:', kpiError)
+      throw new Error(`Failed to fetch KPIs: ${kpiError.message}`)
+    }
 
     return fetchMeasurementsAndMap(kpis)
   },
@@ -21,7 +24,10 @@ export const kpiService = {
       .select('*')
       .not('deleted_at', 'is', null)
 
-    if (kpiError) throw kpiError
+    if (kpiError) {
+      console.error('Error fetching deleted KPIs:', kpiError)
+      throw new Error(`Failed to fetch deleted KPIs: ${kpiError.message}`)
+    }
 
     return fetchMeasurementsAndMap(kpis)
   },
@@ -43,7 +49,10 @@ export const kpiService = {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Error creating KPI:', error)
+      throw new Error(`Failed to create KPI: ${error.message}`)
+    }
 
     return {
       ...kpi,
@@ -69,7 +78,10 @@ export const kpiService = {
       })
       .eq('id', kpi.id!)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error updating KPI:', error)
+      throw new Error(`Failed to update KPI: ${error.message}`)
+    }
   },
 
   async addMeasurement(
@@ -87,7 +99,10 @@ export const kpiService = {
       created_by: userId,
     })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error adding measurement:', error)
+      throw new Error(`Failed to add measurement: ${error.message}`)
+    }
   },
 
   async deleteKPI(kpiId: string): Promise<void> {
@@ -96,7 +111,10 @@ export const kpiService = {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', kpiId)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting KPI:', error)
+      throw new Error(`Failed to delete KPI: ${error.message}`)
+    }
   },
 
   async restoreKPI(kpiId: string): Promise<void> {
@@ -105,7 +123,10 @@ export const kpiService = {
       .update({ deleted_at: null })
       .eq('id', kpiId)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error restoring KPI:', error)
+      throw new Error(`Failed to restore KPI: ${error.message}`)
+    }
   },
 }
 
@@ -120,7 +141,11 @@ async function fetchMeasurementsAndMap(kpis: any[]): Promise<KPI[]> {
     .in('kpi_id', kpiIds)
     .order('recorded_at', { ascending: true })
 
-  if (measError) throw measError
+  if (measError) {
+    console.error('Error fetching measurements:', measError)
+    // We don't fail fetching KPIs if measurements fail, but warn
+    // throw measError
+  }
 
   return kpis.map((k) => {
     const history: KPIHistoryEntry[] = (measurements || [])

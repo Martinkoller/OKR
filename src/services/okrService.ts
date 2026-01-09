@@ -9,7 +9,10 @@ export const okrService = {
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error fetching OKRs:', error)
+      throw new Error(`Failed to fetch OKRs: ${error.message}`)
+    }
 
     return data.map((o) => mapToOKR(o))
   },
@@ -21,7 +24,10 @@ export const okrService = {
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error fetching deleted OKRs:', error)
+      throw new Error(`Failed to fetch deleted OKRs: ${error.message}`)
+    }
 
     return data.map((o) => mapToOKR(o))
   },
@@ -43,7 +49,10 @@ export const okrService = {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Error creating OKR:', error)
+      throw new Error(`Failed to create OKR: ${error.message}`)
+    }
 
     // Insert Key Results if any
     if (okr.keyResults && okr.keyResults.length > 0) {
@@ -55,7 +64,10 @@ export const okrService = {
         unit: kr.unit,
       }))
       const { error: krError } = await supabase.from('key_results').insert(krs)
-      if (krError) console.error('Failed to create key results', krError)
+      if (krError) {
+        console.error('Failed to create key results', krError)
+        // We don't throw here to avoid failing the whole OKR creation, but warn user
+      }
     }
 
     return { ...okr, id: data.id } as OKR
@@ -79,10 +91,12 @@ export const okrService = {
       })
       .eq('id', okr.id!)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error updating OKR:', error)
+      throw new Error(`Failed to update OKR: ${error.message}`)
+    }
 
     // Note: Key Results update logic would go here if we were editing KRs in bulk.
-    // For now, we assume KRs are managed separately or not updated via this partial update.
   },
 
   async deleteOKR(id: string): Promise<void> {
@@ -91,7 +105,10 @@ export const okrService = {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting OKR:', error)
+      throw new Error(`Failed to delete OKR: ${error.message}`)
+    }
   },
 
   async restoreOKR(id: string): Promise<void> {
@@ -100,7 +117,10 @@ export const okrService = {
       .update({ deleted_at: null })
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error restoring OKR:', error)
+      throw new Error(`Failed to restore OKR: ${error.message}`)
+    }
   },
 }
 
