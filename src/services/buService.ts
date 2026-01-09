@@ -19,13 +19,13 @@ export const buService = {
       description: bu.description || '',
       slug: bu.slug || '',
       parentId: bu.parent_id,
-      roleIds: [], // Not yet implemented in DB
+      roleIds: [], // Placeholder as roles are not in DB yet
     }))
   },
 
   async createBU(bu: Partial<BU>): Promise<BU> {
-    // Ensure parentId is null if not provided or empty
-    const parentId = bu.parentId || null
+    // Ensure parentId is null if not provided or empty string
+    const parentId = bu.parentId === 'none' || !bu.parentId ? null : bu.parentId
 
     const { data, error } = await supabase
       .from('business_units')
@@ -40,7 +40,7 @@ export const buService = {
 
     if (error) {
       console.error('Error creating BU:', error)
-      throw new Error(`Failed to create Business Unit: ${error.message}`)
+      throw new Error(`Erro ao criar Unidade de Negócio: ${error.message}`)
     }
 
     return {
@@ -54,7 +54,7 @@ export const buService = {
   },
 
   async updateBU(bu: Partial<BU>): Promise<void> {
-    const parentId = bu.parentId || null
+    const parentId = bu.parentId === 'none' || !bu.parentId ? null : bu.parentId
 
     const { error } = await supabase
       .from('business_units')
@@ -69,7 +69,7 @@ export const buService = {
 
     if (error) {
       console.error('Error updating BU:', error)
-      throw new Error(`Failed to update Business Unit: ${error.message}`)
+      throw new Error(`Erro ao atualizar Unidade de Negócio: ${error.message}`)
     }
   },
 
@@ -81,7 +81,7 @@ export const buService = {
 
     if (error) {
       console.error('Error deleting BU:', error)
-      throw new Error(`Failed to delete Business Unit: ${error.message}`)
+      throw new Error(`Erro ao excluir Unidade de Negócio: ${error.message}`)
     }
   },
 }
