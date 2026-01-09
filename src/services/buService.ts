@@ -10,7 +10,7 @@ export const buService = {
 
     if (error) {
       console.error('Error fetching BUs:', error)
-      throw new Error(`Failed to fetch Business Units: ${error.message}`)
+      throw new Error(`Falha ao buscar Unidades de Negócio: ${error.message}`)
     }
 
     return data.map((bu) => ({
@@ -19,12 +19,11 @@ export const buService = {
       description: bu.description || '',
       slug: bu.slug || '',
       parentId: bu.parent_id,
-      roleIds: [], // Placeholder as roles are not in DB yet
+      roleIds: [], // Roles are not yet implemented in DB
     }))
   },
 
   async createBU(bu: Partial<BU>): Promise<BU> {
-    // Ensure parentId is null if not provided or empty string
     const parentId = bu.parentId === 'none' || !bu.parentId ? null : bu.parentId
 
     const { data, error } = await supabase
@@ -54,6 +53,8 @@ export const buService = {
   },
 
   async updateBU(bu: Partial<BU>): Promise<void> {
+    if (!bu.id) throw new Error('ID da BU é obrigatório para atualização')
+
     const parentId = bu.parentId === 'none' || !bu.parentId ? null : bu.parentId
 
     const { error } = await supabase
@@ -65,7 +66,7 @@ export const buService = {
         parent_id: parentId,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', bu.id!)
+      .eq('id', bu.id)
 
     if (error) {
       console.error('Error updating BU:', error)

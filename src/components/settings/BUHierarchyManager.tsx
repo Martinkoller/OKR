@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { useUserStore } from '@/stores/useUserStore'
 import { useDataStore } from '@/stores/useDataStore'
 import {
@@ -10,7 +13,6 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -34,6 +36,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Badge } from '@/components/ui/badge'
 import {
   Plus,
@@ -45,6 +55,19 @@ import {
 } from 'lucide-react'
 import { BU } from '@/types'
 import { useToast } from '@/hooks/use-toast'
+
+const buSchema = z.object({
+  name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
+  description: z.string().optional(),
+  slug: z
+    .string()
+    .min(2, 'O código deve ter pelo menos 2 caracteres')
+    .regex(
+      /^[a-z0-9-]+$/,
+      'O código deve conter apenas letras minúsculas, números e hífens',
+    ),
+  parentId: z.string().optional(),
+})
 
 export const BUHierarchyManager = () => {
   const {
@@ -60,45 +83,53 @@ export const BUHierarchyManager = () => {
   const { toast } = useToast()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingBU, setEditingBU] = useState<BU | undefined>(undefined)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [slug, setSlug] = useState('')
-  const [parentId, setParentId] = useState<string>('none')
+  const [editingBU, setEditingBU] = useState<BU | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Initial fetch
+  const form = useForm<z.infer<typeof buSchema>>({
+    resolver: zodResolver(buSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      slug: '',
+      parentId: 'none',
+    },
+  })
+
   useEffect(() => {
     fetchBUs()
   }, [fetchBUs])
 
+  useEffect(() => {
+    if (editingBU) {
+      form.reset({
+        name: editingBU.name,
+        description: editingBU.description || '',
+        slug: editingBU.slug,
+        parentId: editingBU.parentId || 'none',
+      })
+    } else {
+      form.reset({
+        name: '',
+        description: '',
+        slug: '',
+        parentId: 'none',
+      })
+    }
+  }, [editingBU, form, isDialogOpen])
+
   const handleCreate = () => {
-    setEditingBU(undefined)
-    setName('')
-    setDescription('')
-    setSlug('')
-    setParentId('none')
+    setEditingBU(null)
     setIsDialogOpen(true)
   }
 
   const handleEdit = (bu: BU) => {
     setEditingBU(bu)
-    setName(bu.name)
-    setDescription(bu.description || '')
-    setSlug(bu.slug)
-    setParentId(bu.parentId || 'none')
     setIsDialogOpen(true)
   }
 
   const handleDelete = async (buId: string) => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Acesso Negado',
-        description: 'Você precisa estar autenticado para realizar esta ação.',
-        variant: 'destructive',
-      })
-      return
-    }
+    if (!isAuthenticated) return
 
     const hasChildren = bus.some((b) => b.parentId === buId)
     if (hasChildren) {
@@ -137,20 +168,11 @@ export const BUHierarchyManager = () => {
     }
   }
 
-  const handleSubmit = async () => {
+  const onSubmit = async (values: z.infer<typeof buSchema>) => {
     if (!isAuthenticated) {
       toast({
-        title: 'Acesso Negado',
-        description: 'Sua sessão expirou. Faça login novamente.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!name || !slug) {
-      toast({
-        title: 'Campos Obrigatórios',
-        description: 'Preencha nome e código da unidade.',
+        title: 'Sessão Expirada',
+        description: 'Faça login novamente para continuar.',
         variant: 'destructive',
       })
       return
@@ -158,11 +180,11 @@ export const BUHierarchyManager = () => {
 
     setIsSubmitting(true)
     const buData: BU = {
-      id: editingBU?.id || '', // ID ignored on create, used on update
-      name,
-      description,
-      slug: slug.toLowerCase().trim(),
-      parentId: parentId === 'none' ? null : parentId,
+      id: editingBU?.id || '',
+      name: values.name,
+      description: values.description,
+      slug: values.slug,
+      parentId: values.parentId === 'none' ? null : values.parentId,
       roleIds: [],
     }
 
@@ -174,7 +196,7 @@ export const BUHierarchyManager = () => {
             entityId: buData.id,
             entityType: 'BU',
             action: 'UPDATE',
-            reason: `BU "${name}" atualizada`,
+            reason: `BU "${values.name}" atualizada`,
             userId: currentUser.id,
           })
         }
@@ -182,13 +204,11 @@ export const BUHierarchyManager = () => {
       } else {
         await addBU(buData)
         if (currentUser) {
-          // Note: entityId here is placeholder as we don't get ID back from store wrapper
-          // But data is saved successfully
           addAuditEntry({
             entityId: 'new-bu',
             entityType: 'BU',
             action: 'CREATE',
-            reason: `Nova BU "${name}" criada`,
+            reason: `Nova BU "${values.name}" criada`,
             userId: currentUser.id,
           })
         }
@@ -196,12 +216,11 @@ export const BUHierarchyManager = () => {
       }
       setIsDialogOpen(false)
     } catch (error: any) {
-      console.error(error)
       toast({
         title: 'Erro na Operação',
         description:
           error.message ||
-          'Não foi possível salvar a unidade. Verifique suas permissões.',
+          'Não foi possível salvar a unidade. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
@@ -215,6 +234,17 @@ export const BUHierarchyManager = () => {
         b.parentId === (parentId || undefined) ||
         (parentId === null && !b.parentId),
     )
+
+    if (
+      children.length === 0 &&
+      depth === 0 &&
+      bus.length > 0 &&
+      parentId === null
+    ) {
+      // Fallback for flat lists or corrupted hierarchy
+      const roots = bus.filter((b) => !b.parentId)
+      if (roots.length === 0) return null // Prevent infinite loop if cycle (shouldn't happen)
+    }
 
     return children.map((bu) => (
       <>
@@ -242,7 +272,7 @@ export const BUHierarchyManager = () => {
             )}
           </TableCell>
           <TableCell className="font-mono text-xs text-muted-foreground">
-            {bu.slug.toUpperCase()}
+            {bu.slug}
           </TableCell>
           <TableCell>
             {bu.parentId ? (
@@ -330,72 +360,113 @@ export const BUHierarchyManager = () => {
               {editingBU ? 'Editar Unidade' : 'Nova Unidade'}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Nome da Unidade</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Varejo Sul"
-                disabled={isSubmitting}
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome da Unidade</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ex: Varejo Sul"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descrição da unidade..."
-                disabled={isSubmitting}
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Descrição da unidade..."
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Código (Slug)</Label>
-              <Input
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="Ex: varejo-sul"
-                disabled={isSubmitting}
+
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código (Slug)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ex: varejo-sul"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Unidade Pai</Label>
-              <Select
-                value={parentId}
-                onValueChange={setParentId}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma (Raiz)</SelectItem>
-                  {bus
-                    .filter((b) => b.id !== editingBU?.id)
-                    .map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDialogOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Salvar
-            </Button>
-          </DialogFooter>
+
+              <FormField
+                control={form.control}
+                name="parentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidade Pai</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma (Raiz)</SelectItem>
+                        {bus
+                          .filter((b) => b.id !== editingBU?.id)
+                          .map((b) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {b.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setIsDialogOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </Card>
