@@ -33,7 +33,7 @@ import { useDataStore } from '@/stores/useDataStore'
 import { OKR, Template } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { useEffect, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, Loader2 } from 'lucide-react'
 import { TemplateSelector } from '@/components/templates/TemplateSelector'
 
 const formSchema = z.object({
@@ -64,6 +64,7 @@ export const OKRFormDialog = ({
   const { addOKR, updateOKR } = useDataStore()
   const { toast } = useToast()
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const currentYear = new Date().getFullYear().toString()
 
@@ -110,6 +111,7 @@ export const OKRFormDialog = ({
   }, [open, form, currentYear, currentUser, okrToEdit])
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true)
     const okrData: OKR = {
       id: okrToEdit?.id || '',
       title: values.title,
@@ -118,31 +120,41 @@ export const OKRFormDialog = ({
       scope: values.scope,
       startYear: parseInt(values.startYear),
       endYear: parseInt(values.endYear),
-      startDate: `${values.startYear}-01-01`, // Defaulting for simple year UI
+      startDate: `${values.startYear}-01-01`,
       endDate: `${values.endYear}-12-31`,
       weight: values.weight,
       ownerId: values.ownerId,
-      kpiIds: [], // KPIs linked via separate UI or new structure if implemented
+      kpiIds: [],
       progress: okrToEdit?.progress || 0,
       status: okrToEdit?.status || 'DRAFT',
     }
 
-    if (currentUser) {
-      if (okrToEdit) {
-        await updateOKR(okrData, currentUser.id)
-        toast({
-          title: 'OKR Atualizado',
-          description: 'As alterações foram salvas com sucesso.',
-        })
-      } else {
-        await addOKR(okrData, currentUser.id)
-        toast({
-          title: 'OKR Criado',
-          description: `O objetivo "${values.title}" foi criado com sucesso.`,
-        })
+    try {
+      if (currentUser) {
+        if (okrToEdit) {
+          await updateOKR(okrData, currentUser.id)
+          toast({
+            title: 'OKR Atualizado',
+            description: 'As alterações foram salvas com sucesso.',
+          })
+        } else {
+          await addOKR(okrData, currentUser.id)
+          toast({
+            title: 'OKR Criado',
+            description: `O objetivo "${values.title}" foi criado com sucesso.`,
+          })
+        }
+        onOpenChange(false)
+        onSuccess?.()
       }
-      onOpenChange(false)
-      onSuccess?.()
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao salvar o OKR. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -174,6 +186,7 @@ export const OKRFormDialog = ({
               size="sm"
               type="button"
               onClick={() => setIsTemplateOpen(true)}
+              disabled={isSubmitting}
             >
               <FileText className="mr-2 h-4 w-4" /> Usar Modelo
             </Button>
@@ -192,7 +205,11 @@ export const OKRFormDialog = ({
                 <FormItem>
                   <FormLabel>Título do Objetivo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Expandir market share" {...field} />
+                    <Input
+                      placeholder="Ex: Expandir market share"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -209,6 +226,7 @@ export const OKRFormDialog = ({
                     <Textarea
                       placeholder="Detalhes sobre a estratégia..."
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -226,6 +244,7 @@ export const OKRFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -254,6 +273,7 @@ export const OKRFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -284,6 +304,7 @@ export const OKRFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -307,7 +328,13 @@ export const OKRFormDialog = ({
                   <FormItem>
                     <FormLabel>Peso Estratégico (1-100)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" max="100" {...field} />
+                      <Input
+                        type="number"
+                        min="1"
+                        max="100"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -323,7 +350,7 @@ export const OKRFormDialog = ({
                   <FormItem>
                     <FormLabel>Ano Início</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -337,7 +364,7 @@ export const OKRFormDialog = ({
                   <FormItem>
                     <FormLabel>Ano Fim</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -350,10 +377,14 @@ export const OKRFormDialog = ({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 {okrToEdit ? 'Salvar Alterações' : 'Criar OKR'}
               </Button>
             </DialogFooter>

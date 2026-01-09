@@ -35,7 +35,14 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit2, Trash2, FolderTree, CornerDownRight } from 'lucide-react'
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  FolderTree,
+  CornerDownRight,
+  Loader2,
+} from 'lucide-react'
 import { BU } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -51,6 +58,7 @@ export const BUHierarchyManager = () => {
   const [description, setDescription] = useState('')
   const [slug, setSlug] = useState('')
   const [parentId, setParentId] = useState<string>('none')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     fetchBUs()
@@ -86,17 +94,25 @@ export const BUHierarchyManager = () => {
     }
 
     if (confirm('Tem certeza que deseja excluir esta Unidade?')) {
-      await deleteBU(buId)
-      if (currentUser) {
-        addAuditEntry({
-          entityId: buId,
-          entityType: 'BU',
-          action: 'DELETE',
-          reason: 'Unidade de Negócio excluída',
-          userId: currentUser.id,
+      try {
+        await deleteBU(buId)
+        if (currentUser) {
+          addAuditEntry({
+            entityId: buId,
+            entityType: 'BU',
+            action: 'DELETE',
+            reason: 'Unidade de Negócio excluída',
+            userId: currentUser.id,
+          })
+        }
+        toast({ title: 'Unidade removida' })
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível excluir a unidade.',
+          variant: 'destructive',
         })
       }
-      toast({ title: 'Unidade removida' })
     }
   }
 
@@ -110,6 +126,7 @@ export const BUHierarchyManager = () => {
       return
     }
 
+    setIsSubmitting(true)
     const buData: BU = {
       id: editingBU?.id || '',
       name,
@@ -119,32 +136,42 @@ export const BUHierarchyManager = () => {
       roleIds: editingBU?.roleIds || [],
     }
 
-    if (editingBU) {
-      await updateBU(buData)
-      if (currentUser) {
-        addAuditEntry({
-          entityId: buData.id,
-          entityType: 'BU',
-          action: 'UPDATE',
-          reason: `BU "${name}" atualizada`,
-          userId: currentUser.id,
-        })
+    try {
+      if (editingBU) {
+        await updateBU(buData)
+        if (currentUser) {
+          addAuditEntry({
+            entityId: buData.id,
+            entityType: 'BU',
+            action: 'UPDATE',
+            reason: `BU "${name}" atualizada`,
+            userId: currentUser.id,
+          })
+        }
+        toast({ title: 'Unidade atualizada' })
+      } else {
+        await addBU(buData)
+        if (currentUser) {
+          addAuditEntry({
+            entityId: 'new', // will be generated
+            entityType: 'BU',
+            action: 'CREATE',
+            reason: `Nova BU "${name}" criada`,
+            userId: currentUser.id,
+          })
+        }
+        toast({ title: 'Unidade criada' })
       }
-      toast({ title: 'Unidade atualizada' })
-    } else {
-      await addBU(buData)
-      if (currentUser) {
-        addAuditEntry({
-          entityId: 'new', // will be generated
-          entityType: 'BU',
-          action: 'CREATE',
-          reason: `Nova BU "${name}" criada`,
-          userId: currentUser.id,
-        })
-      }
-      toast({ title: 'Unidade criada' })
+      setIsDialogOpen(false)
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível salvar a unidade.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsDialogOpen(false)
   }
 
   const renderRows = (parentId: string | null, depth: number = 0) => {
@@ -270,6 +297,7 @@ export const BUHierarchyManager = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Varejo Sul"
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid gap-2">
@@ -278,6 +306,7 @@ export const BUHierarchyManager = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Descrição da unidade..."
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid gap-2">
@@ -286,11 +315,16 @@ export const BUHierarchyManager = () => {
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 placeholder="Ex: varejo-sul"
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid gap-2">
               <Label>Unidade Pai</Label>
-              <Select value={parentId} onValueChange={setParentId}>
+              <Select
+                value={parentId}
+                onValueChange={setParentId}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
@@ -308,10 +342,19 @@ export const BUHierarchyManager = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSubmit}>Salvar</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

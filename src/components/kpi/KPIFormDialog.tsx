@@ -33,7 +33,7 @@ import { useDataStore } from '@/stores/useDataStore'
 import { KPI, Template } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { useEffect, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, Loader2 } from 'lucide-react'
 import { TemplateSelector } from '@/components/templates/TemplateSelector'
 
 const formSchema = z.object({
@@ -65,6 +65,7 @@ export const KPIFormDialog = ({
   const { addKPI } = useDataStore()
   const { toast } = useToast()
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -97,9 +98,10 @@ export const KPIFormDialog = ({
     }
   }, [open, form, currentUser, defaultValues])
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true)
     const newKPI: KPI = {
-      id: `kpi-${Date.now()}`,
+      id: `kpi-${Date.now()}`, // Temporary ID, will be replaced by DB
       name: values.name,
       description: values.description || '',
       buId: values.buId,
@@ -110,19 +112,29 @@ export const KPIFormDialog = ({
       goal: values.goal,
       weight: values.weight,
       currentValue: 0,
-      status: 'RED', // Starts red as current value is 0
+      status: 'RED',
       lastUpdated: new Date().toISOString(),
       history: [],
     }
 
-    if (currentUser) {
-      addKPI(newKPI, currentUser.id)
+    try {
+      if (currentUser) {
+        await addKPI(newKPI, currentUser.id)
+        toast({
+          title: 'KPI Criado',
+          description: `O indicador "${values.name}" foi registrado.`,
+        })
+        onOpenChange(false)
+        onSuccess?.(newKPI)
+      }
+    } catch (error) {
       toast({
-        title: 'KPI Criado',
-        description: `O indicador "${values.name}" foi registrado.`,
+        title: 'Erro',
+        description: 'Falha ao criar o KPI. Tente novamente.',
+        variant: 'destructive',
       })
-      onOpenChange(false)
-      onSuccess?.(newKPI)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -152,6 +164,7 @@ export const KPIFormDialog = ({
               size="sm"
               type="button"
               onClick={() => setIsTemplateOpen(true)}
+              disabled={isSubmitting}
             >
               <FileText className="mr-2 h-4 w-4" /> Usar Modelo
             </Button>
@@ -170,7 +183,11 @@ export const KPIFormDialog = ({
                 <FormItem>
                   <FormLabel>Nome do KPI</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Receita Recorrente" {...field} />
+                    <Input
+                      placeholder="Ex: Receita Recorrente"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -184,7 +201,11 @@ export const KPIFormDialog = ({
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="O que este KPI mede?" {...field} />
+                    <Textarea
+                      placeholder="O que este KPI mede?"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -201,6 +222,7 @@ export const KPIFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -229,6 +251,7 @@ export const KPIFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -259,6 +282,7 @@ export const KPIFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -286,6 +310,7 @@ export const KPIFormDialog = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -311,7 +336,11 @@ export const KPIFormDialog = ({
                   <FormItem>
                     <FormLabel>Unidade</FormLabel>
                     <FormControl>
-                      <Input placeholder="%, R$, pts" {...field} />
+                      <Input
+                        placeholder="%, R$, pts"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,7 +354,12 @@ export const KPIFormDialog = ({
                   <FormItem>
                     <FormLabel>Meta</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -339,7 +373,13 @@ export const KPIFormDialog = ({
                   <FormItem>
                     <FormLabel>Peso (0-100)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="0" max="100" {...field} />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -352,10 +392,16 @@ export const KPIFormDialog = ({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button type="submit">Criar KPI</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Criar KPI
+              </Button>
             </DialogFooter>
           </form>
         </Form>

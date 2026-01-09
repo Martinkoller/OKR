@@ -13,13 +13,17 @@ import { okrService } from '@/services/okrService'
 interface DataState {
   okrs: OKR[]
   kpis: KPI[]
+  deletedOkrs: OKR[]
+  deletedKpis: KPI[]
   actionPlans: ActionPlan[]
   auditLogs: AuditEntry[]
   templates: Template[]
   isLoading: boolean
+  isRecycleBinLoading: boolean
 
   fetchKPIs: () => Promise<void>
   fetchOKRs: () => Promise<void>
+  fetchRecycleBin: () => Promise<void>
 
   updateKPI: (
     kpiId: string,
@@ -49,8 +53,8 @@ interface DataState {
   deleteOKR: (okrId: string, userId: string) => Promise<void>
   deleteKPI: (kpiId: string, userId: string) => Promise<void>
 
-  restoreOKR: (okrId: string, userId: string) => void
-  restoreKPI: (kpiId: string, userId: string) => void
+  restoreOKR: (okrId: string, userId: string) => Promise<void>
+  restoreKPI: (kpiId: string, userId: string) => Promise<void>
 
   addTemplate: (template: Template, userId: string) => void
   updateTemplate: (template: Template, userId: string) => void
@@ -62,10 +66,13 @@ export const useDataStore = create<DataState>()(
     (set, get) => ({
       okrs: [],
       kpis: [],
+      deletedOkrs: [],
+      deletedKpis: [],
       actionPlans: MOCK_ACTION_PLANS,
       auditLogs: MOCK_AUDIT_LOGS,
       templates: MOCK_TEMPLATES,
       isLoading: false,
+      isRecycleBinLoading: false,
 
       fetchKPIs: async () => {
         set({ isLoading: true })
@@ -88,6 +95,21 @@ export const useDataStore = create<DataState>()(
           console.error('Failed to fetch OKRs:', error)
         } finally {
           set({ isLoading: false })
+        }
+      },
+
+      fetchRecycleBin: async () => {
+        set({ isRecycleBinLoading: true })
+        try {
+          const [deletedOkrs, deletedKpis] = await Promise.all([
+            okrService.fetchDeletedOKRs(),
+            kpiService.fetchDeletedKPIs(),
+          ])
+          set({ deletedOkrs, deletedKpis })
+        } catch (error) {
+          console.error('Failed to fetch Recycle Bin items:', error)
+        } finally {
+          set({ isRecycleBinLoading: false })
         }
       },
 
@@ -115,6 +137,7 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to update KPI:', error)
+          throw error
         }
       },
 
@@ -131,6 +154,7 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to create KPI:', error)
+          throw error
         }
       },
 
@@ -138,6 +162,7 @@ export const useDataStore = create<DataState>()(
         try {
           await kpiService.deleteKPI(kpiId)
           await get().fetchKPIs()
+          await get().fetchRecycleBin()
           get().addAuditEntry({
             entityId: kpiId,
             entityType: 'KPI',
@@ -147,6 +172,7 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to delete KPI:', error)
+          throw error
         }
       },
 
@@ -156,7 +182,6 @@ export const useDataStore = create<DataState>()(
 
       updateOKR: async (okr, userId) => {
         try {
-          // Progress calculation is usually done server side or derived, but if we do it here:
           const { progress, status } = calculateOKRProgress(okr, get().kpis)
           const okrToUpdate = { ...okr, progress, status }
 
@@ -172,6 +197,7 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to update OKR', error)
+          throw error
         }
       },
 
@@ -188,6 +214,7 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to create OKR', error)
+          throw error
         }
       },
 
@@ -195,6 +222,7 @@ export const useDataStore = create<DataState>()(
         try {
           await okrService.deleteOKR(okrId)
           await get().fetchOKRs()
+          await get().fetchRecycleBin()
           get().addAuditEntry({
             entityId: okrId,
             entityType: 'OKR',
@@ -204,6 +232,7 @@ export const useDataStore = create<DataState>()(
           })
         } catch (error) {
           console.error('Failed to delete OKR', error)
+          throw error
         }
       },
 
@@ -250,8 +279,40 @@ export const useDataStore = create<DataState>()(
           ],
         })),
 
-      restoreOKR: (okrId, userId) => {},
-      restoreKPI: (kpiId, userId) => {},
+      restoreOKR: async (okrId, userId) => {
+        try {
+          await okrService.restoreOKR(okrId)
+          await get().fetchOKRs()
+          await get().fetchRecycleBin()
+          get().addAuditEntry({
+            entityId: okrId,
+            entityType: 'OKR',
+            action: 'UPDATE',
+            reason: 'OKR Restored',
+            userId,
+          })
+        } catch (error) {
+          console.error('Failed to restore OKR', error)
+          throw error
+        }
+      },
+      restoreKPI: async (kpiId, userId) => {
+        try {
+          await kpiService.restoreKPI(kpiId)
+          await get().fetchKPIs()
+          await get().fetchRecycleBin()
+          get().addAuditEntry({
+            entityId: kpiId,
+            entityType: 'KPI',
+            action: 'UPDATE',
+            reason: 'KPI Restored',
+            userId,
+          })
+        } catch (error) {
+          console.error('Failed to restore KPI', error)
+          throw error
+        }
+      },
 
       addTemplate: (template, userId) =>
         set((state) => ({ templates: [...state.templates, template] })),

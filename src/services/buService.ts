@@ -10,13 +10,13 @@ export const buService = {
 
     if (error) throw error
 
-    return data.map((bu: any) => ({
+    return data.map((bu) => ({
       id: bu.id,
       name: bu.name,
-      description: bu.description,
-      slug: bu.slug,
+      description: bu.description || '',
+      slug: bu.slug || '',
       parentId: bu.parent_id,
-      roleIds: [], // Placeholder as roles might be stored elsewhere or not in this table
+      roleIds: [],
     }))
   },
 
@@ -24,7 +24,7 @@ export const buService = {
     const { data, error } = await supabase
       .from('business_units')
       .insert({
-        name: bu.name,
+        name: bu.name!,
         description: bu.description,
         slug: bu.slug,
         parent_id: bu.parentId,
@@ -37,8 +37,8 @@ export const buService = {
     return {
       id: data.id,
       name: data.name,
-      description: data.description,
-      slug: data.slug,
+      description: data.description || '',
+      slug: data.slug || '',
       parentId: data.parent_id,
       roleIds: [],
     }
@@ -54,7 +54,7 @@ export const buService = {
         parent_id: bu.parentId,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', bu.id)
+      .eq('id', bu.id!)
 
     if (error) throw error
   },

@@ -17,25 +17,34 @@ import {
   CardContent,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, RotateCcw, Search } from 'lucide-react'
-import { useState } from 'react'
+import { Trash2, RotateCcw, Search, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
 
 export const RecycleBin = () => {
-  const { okrs, kpis, restoreOKR, restoreKPI } = useDataStore()
+  const {
+    deletedOkrs,
+    deletedKpis,
+    fetchRecycleBin,
+    restoreOKR,
+    restoreKPI,
+    isRecycleBinLoading,
+  } = useDataStore()
   const { currentUser } = useUserStore()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
+  const [isRestoring, setIsRestoring] = useState<string | null>(null)
 
-  const deletedOKRs = okrs.filter((o) => o.deletedAt)
-  const deletedKPIs = kpis.filter((k) => k.deletedAt)
+  useEffect(() => {
+    fetchRecycleBin()
+  }, [fetchRecycleBin])
 
   const allDeleted = [
-    ...deletedOKRs.map((o) => ({ ...o, entityType: 'OKR' as const })),
-    ...deletedKPIs.map((k) => ({ ...k, entityType: 'KPI' as const })),
+    ...deletedOkrs.map((o) => ({ ...o, entityType: 'OKR' as const })),
+    ...deletedKpis.map((k) => ({ ...k, entityType: 'KPI' as const })),
   ]
 
   const filteredItems = allDeleted.filter((item) => {
@@ -43,19 +52,30 @@ export const RecycleBin = () => {
     return name.toLowerCase().includes(searchTerm.toLowerCase())
   })
 
-  const handleRestore = (item: (typeof filteredItems)[0]) => {
+  const handleRestore = async (item: (typeof filteredItems)[0]) => {
     if (!currentUser) return
 
-    if (item.entityType === 'OKR') {
-      restoreOKR(item.id, currentUser.id)
-    } else {
-      restoreKPI(item.id, currentUser.id)
-    }
+    setIsRestoring(item.id)
+    try {
+      if (item.entityType === 'OKR') {
+        await restoreOKR(item.id, currentUser.id)
+      } else {
+        await restoreKPI(item.id, currentUser.id)
+      }
 
-    toast({
-      title: 'Item Restaurado',
-      description: `${item.entityType} recuperado com sucesso.`,
-    })
+      toast({
+        title: 'Item Restaurado',
+        description: `${item.entityType} recuperado com sucesso.`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: `Não foi possível restaurar o ${item.entityType}.`,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsRestoring(null)
+    }
   }
 
   return (
@@ -94,7 +114,16 @@ export const RecycleBin = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.length === 0 ? (
+              {isRecycleBinLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8">
+                    <div className="flex justify-center items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando lixeira...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredItems.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={4}
@@ -124,8 +153,14 @@ export const RecycleBin = () => {
                         size="sm"
                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         onClick={() => handleRestore(item)}
+                        disabled={isRestoring === item.id}
                       >
-                        <RotateCcw className="mr-2 h-4 w-4" /> Restaurar
+                        {isRestoring === item.id ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                        )}
+                        Restaurar
                       </Button>
                     </TableCell>
                   </TableRow>

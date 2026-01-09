@@ -68,7 +68,7 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       currentUser: null,
       selectedBUIds: ['GLOBAL'],
-      bus: [], // Intentionally empty initially, to be fetched
+      bus: [],
       users: MOCK_USERS,
       roles: MOCK_ROLES,
       groups: MOCK_GROUPS,
@@ -183,11 +183,13 @@ export const useUserStore = create<UserState>()(
         })),
 
       addBU: async (bu) => {
+        // Rethrowing error for UI handling
         try {
           await buService.createBU(bu)
           await get().fetchBUs()
         } catch (e) {
           console.error(e)
+          throw e
         }
       },
       updateBU: async (bu) => {
@@ -196,6 +198,7 @@ export const useUserStore = create<UserState>()(
           await get().fetchBUs()
         } catch (e) {
           console.error(e)
+          throw e
         }
       },
       deleteBU: async (buId) => {
@@ -204,6 +207,7 @@ export const useUserStore = create<UserState>()(
           await get().fetchBUs()
         } catch (e) {
           console.error(e)
+          throw e
         }
       },
 
